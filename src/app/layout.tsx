@@ -4,6 +4,7 @@ import './globals.css'
 import { SmoothScroll } from '@/components/motion/SmoothScroll'
 import { CursorGlow } from '@/components/motion/CursorGlow'
 import { ToothPreloader } from '@/components/motion/ToothPreloader'
+import { DentalJsonLd } from '@/components/site/DentalJsonLd'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -84,6 +85,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+      <head>
+        <DentalJsonLd />
+      </head>
       <body className="bg-ivory text-ink selection:bg-electric-teal selection:text-white">
         <ToothPreloader />
         <CursorGlow />
