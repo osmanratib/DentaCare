@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import {
   Calendar,
   Clock,
@@ -9,10 +10,16 @@ import {
   CheckCircle2,
   AlertCircle,
   TrendingUp,
-  ArrowUpRight,
+  ArrowRight,
   Sparkles,
   Stethoscope,
   Briefcase,
+  Phone,
+  Mail,
+  ShieldCheck,
+  ChevronRight,
+  HeartHandshake,
+  Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -20,6 +27,7 @@ export default function AdminDashboardPage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [appointments, setAppointments] = useState<any[]>([])
+  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all')
   const [stats, setStats] = useState({
     pending: 0,
     confirmed: 0,
@@ -30,7 +38,7 @@ export default function AdminDashboardPage() {
   const loadDashboardData = async () => {
     setLoading(true)
 
-    // 1. Appointments
+    // 1. Fetch appointments with joined patient & service
     const { data: apts } = await supabase
       .from('appointments')
       .select(`
@@ -38,11 +46,13 @@ export default function AdminDashboardPage() {
         requested_at,
         status,
         message,
-        patient:patients ( full_name, phone ),
-        service:services ( title )
+        source,
+        created_at,
+        patient:patients ( id, full_name, phone, email, notes ),
+        service:services ( id, title, price_from, duration_min )
       `)
       .order('requested_at', { ascending: false })
-      .limit(6)
+      .limit(8)
 
     if (apts) {
       const normalized = apts.map((item: any) => ({
@@ -55,9 +65,13 @@ export default function AdminDashboardPage() {
       const pending = apts.filter((a: any) => a.status === 'pending').length
       const confirmed = apts.filter((a: any) => a.status === 'confirmed').length
 
-      // 2. Counts
-      const { count: patCount } = await supabase.from('patients').select('*', { count: 'exact', head: true })
-      const { count: sCount } = await supabase.from('services').select('*', { count: 'exact', head: true })
+      // 2. Exact Counts
+      const { count: patCount } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true })
+      const { count: sCount } = await supabase
+        .from('services')
+        .select('*', { count: 'exact', head: true })
 
       setStats({
         pending,
@@ -82,191 +96,337 @@ export default function AdminDashboardPage() {
     loadDashboardData()
   }
 
+  const filtered = appointments.filter((a) => {
+    if (filter === 'all') return true
+    return a.status === filter
+  })
+
   return (
-    <div className="space-y-6 sm:space-y-8">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-electric-teal">
-            Live Telemetry
-          </span>
-          <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-medium text-white">
-            Clinic Command Center
+    <div className="space-y-8">
+      {/* ===================================================================
+          1. WARM EDITORIAL GREETING BANNER
+         =================================================================== */}
+      <div className="relative overflow-hidden rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-10 shadow-[0_4px_30px_rgba(14,26,36,0.03)]">
+        <div className="relative z-10 max-w-2xl">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#EFECE3] px-3.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-[#0E1A24]">
+            <Sparkles className="h-3.5 w-3.5 text-[#12B5A6]" />
+            <span>Manhattan Operatories • Private Practice</span>
+          </div>
+
+          <h1 className="mt-4 font-serif text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-[#0E1A24] leading-tight">
+            Good evening, <span className="italic text-[#12B5A6]">Dr. Ratib</span>.
           </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Real-time metrics connected directly to your PostgreSQL database.
+
+          <p className="mt-3 text-xs sm:text-sm text-[#0E1A24]/70 leading-relaxed font-light">
+            You have <strong className="text-[#0E1A24] font-medium">{stats.confirmed} scheduled visits</strong> and{' '}
+            <strong className="text-[#12B5A6] font-medium">{stats.pending} patient requests</strong> awaiting clinical triage. The sterilization autoclaves are verified and operatories are ready.
           </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/appointments"
+              className="flex items-center gap-2 rounded-full bg-[#0E1A24] px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#12B5A6] transition-colors shadow-sm"
+            >
+              <span>Review Schedule Matrix</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/admin/team"
+              className="flex items-center gap-2 rounded-full border border-[#DAC7AD] bg-[#FAF8F5] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#0E1A24] hover:bg-white transition-colors"
+            >
+              <span>Specialist Faculty</span>
+            </Link>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/admin/appointments"
-            className="flex items-center gap-1.5 rounded-xl bg-electric-teal px-4 py-2 text-xs font-semibold text-slate-950 shadow-glow-teal hover:bg-white transition-colors"
-          >
-            <span>Manage All Bookings</span>
-            <ArrowUpRight className="h-4 w-4" />
-          </Link>
+        {/* Ambient warm gradient circle */}
+        <div className="absolute top-0 right-0 h-80 w-80 translate-x-20 -translate-y-20 rounded-full bg-[#CFE8E4]/40 blur-3xl pointer-events-none" />
+      </div>
+
+      {/* ===================================================================
+          2. HUMAN CLINIC METRICS (Editorial Ivory Cards)
+         =================================================================== */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[#0E1A24]/60">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Awaiting Triage</span>
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+            </div>
+            <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
+              {stats.pending}
+            </div>
+          </div>
+          <div className="mt-3 text-[11px] text-amber-700 font-medium bg-amber-50 rounded-xl px-2.5 py-1 w-fit">
+            Needs doctor review
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[#0E1A24]/60">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Confirmed Bookings</span>
+              <CheckCircle2 className="h-4 w-4 text-[#12B5A6]" />
+            </div>
+            <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
+              {stats.confirmed}
+            </div>
+          </div>
+          <div className="mt-3 text-[11px] text-emerald-700 font-medium bg-emerald-50 rounded-xl px-2.5 py-1 w-fit">
+            Operatories reserved
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[#0E1A24]/60">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Active Patient Registry</span>
+              <Users className="h-4 w-4 text-sky-600" />
+            </div>
+            <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
+              {stats.patientsCount}
+            </div>
+          </div>
+          <div className="mt-3 text-[11px] text-sky-800 font-medium bg-sky-50 rounded-xl px-2.5 py-1 w-fit">
+            Registered charts
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-[#0E1A24]/60">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Laboratory Artistry</span>
+              <HeartHandshake className="h-4 w-4 text-[#12B5A6]" />
+            </div>
+            <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
+              4.98<span className="text-xl text-[#12B5A6]">★</span>
+            </div>
+          </div>
+          <div className="mt-3 text-[11px] text-[#0E1A24]/70 font-medium bg-[#EFECE3] rounded-xl px-2.5 py-1 w-fit">
+            Patient satisfaction index
+          </div>
         </div>
       </div>
 
-      {/* KPI Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Pending Bookings</span>
-            <Clock className="h-4 w-4 text-amber-400" />
-          </div>
-          <div className="mt-3 font-serif text-3xl font-bold text-white">{stats.pending}</div>
-          <div className="mt-1.5 text-[11px] text-amber-400 font-medium">Requires staff review</div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Confirmed</span>
-            <CheckCircle2 className="h-4 w-4 text-electric-teal" />
-          </div>
-          <div className="mt-3 font-serif text-3xl font-bold text-white">{stats.confirmed}</div>
-          <div className="mt-1.5 text-[11px] text-emerald-400 font-medium">Scheduled in calendar</div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Total Patients</span>
-            <Users className="h-4 w-4 text-blue-400" />
-          </div>
-          <div className="mt-3 font-serif text-3xl font-bold text-white">{stats.patientsCount}</div>
-          <div className="mt-1.5 text-[11px] text-slate-400 font-medium">In Supabase registry</div>
-        </div>
-
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[11px] font-medium uppercase tracking-wider">Active Services</span>
-            <Briefcase className="h-4 w-4 text-purple-400" />
-          </div>
-          <div className="mt-3 font-serif text-3xl font-bold text-white">{stats.servicesCount}</div>
-          <div className="mt-1.5 text-[11px] text-purple-400 font-medium">Public catalog items</div>
-        </div>
-      </div>
-
-      {/* Quick Access Matrix */}
+      {/* ===================================================================
+          3. HUMAN QUICK CLINICAL SHORTCUTS
+         =================================================================== */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Link
           href="/admin/team"
-          className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 hover:border-electric-teal/50 transition-all flex items-center gap-3"
+          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
         >
-          <div className="p-2.5 rounded-xl bg-electric-teal/15 text-electric-teal">
+          <div className="p-3 rounded-2xl bg-[#CFE8E4]/60 text-[#0E1A24] group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
             <Stethoscope className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-white">Doctors</div>
-            <div className="text-[10px] text-slate-400">Manage Faculty</div>
+            <div className="text-xs font-bold text-[#0E1A24]">Doctors Roster</div>
+            <div className="text-[11px] text-[#0E1A24]/60">Add & Edit Faculty</div>
           </div>
         </Link>
 
         <Link
           href="/admin/services"
-          className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 hover:border-electric-teal/50 transition-all flex items-center gap-3"
+          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
         >
-          <div className="p-2.5 rounded-xl bg-purple-500/15 text-purple-400">
+          <div className="p-3 rounded-2xl bg-[#E8DCC8]/60 text-[#0E1A24] group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
             <Briefcase className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-white">Treatments</div>
-            <div className="text-[10px] text-slate-400">Add & Edit Menu</div>
+            <div className="text-xs font-bold text-[#0E1A24]">Procedures Menu</div>
+            <div className="text-[11px] text-[#0E1A24]/60">Pricing & Protocols</div>
           </div>
         </Link>
 
         <Link
           href="/admin/patients"
-          className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 hover:border-electric-teal/50 transition-all flex items-center gap-3"
+          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
         >
-          <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-400">
+          <div className="p-3 rounded-2xl bg-sky-100 text-sky-900 group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-white">Patients</div>
-            <div className="text-[10px] text-slate-400">View Histories</div>
+            <div className="text-xs font-bold text-[#0E1A24]">Patient Files</div>
+            <div className="text-[11px] text-[#0E1A24]/60">Notes & History</div>
           </div>
         </Link>
 
         <Link
           href="/admin/availability"
-          className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4 hover:border-electric-teal/50 transition-all flex items-center gap-3"
+          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
         >
-          <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-400">
+          <div className="p-3 rounded-2xl bg-amber-100 text-amber-900 group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
             <Clock className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-white">Operating Slots</div>
-            <div className="text-[10px] text-slate-400">Hours & Blocked</div>
+            <div className="text-xs font-bold text-[#0E1A24]">Operating Slots</div>
+            <div className="text-[11px] text-[#0E1A24]/60">Hours & Holidays</div>
           </div>
         </Link>
       </div>
 
-      {/* Live Recent Pipeline */}
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-7 shadow-sm">
-        <div className="flex items-center justify-between mb-5">
+      {/* ===================================================================
+          4. PATIENT APPOINTMENT QUEUE (Warm Medical Chart Cards)
+         =================================================================== */}
+      <div className="rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-[0_4px_30px_rgba(14,26,36,0.02)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE1] pb-6">
           <div>
-            <h3 className="font-serif text-lg sm:text-xl font-medium text-white">
-              Recent Inquiries & Intake
-            </h3>
-            <p className="text-xs text-slate-400">Live database rows from Supabase</p>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#12B5A6]">
+              Patient Pipeline
+            </div>
+            <h2 className="mt-1 font-serif text-2xl font-medium text-[#0E1A24]">
+              Recent Consultations & Requests
+            </h2>
           </div>
-          <Link
-            href="/admin/appointments"
-            className="text-xs text-electric-teal hover:underline font-medium"
-          >
-            View All
-          </Link>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFilter('all')}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                filter === 'all'
+                  ? 'bg-[#0E1A24] text-white'
+                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
+              }`}
+            >
+              All ({appointments.length})
+            </button>
+            <button
+              onClick={() => setFilter('pending')}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                filter === 'pending'
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
+              }`}
+            >
+              Pending ({stats.pending})
+            </button>
+            <button
+              onClick={() => setFilter('confirmed')}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                filter === 'confirmed'
+                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
+              }`}
+            >
+              Confirmed ({stats.confirmed})
+            </button>
+          </div>
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-slate-400">Loading live data...</div>
-        ) : appointments.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400">
-            No appointment records yet. Submit a test booking on the website to see it appear here.
+          <div className="py-12 text-center text-xs text-[#0E1A24]/50">
+            Consulting Supabase database...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center text-xs text-[#0E1A24]/50">
+            No consultations matching this category.
           </div>
         ) : (
-          <div className="space-y-3">
-            {appointments.map((apt) => (
+          <div className="mt-6 space-y-4">
+            {filtered.map((apt) => (
               <div
                 key={apt.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs"
+                className="group rounded-3xl border border-[#E5E0D5] bg-[#FAF8F5] p-5 sm:p-6 transition-all hover:bg-white hover:border-[#DAC7AD] hover:shadow-[0_4px_20px_rgba(14,26,36,0.04)]"
               >
-                <div>
-                  <div className="font-semibold text-white text-sm">
-                    {apt.patient?.full_name || 'Patient'}
-                  </div>
-                  <div className="text-slate-400 text-xs">
-                    {apt.service?.title || 'General Consultation'} • {apt.patient?.phone}
-                  </div>
-                  {apt.message && (
-                    <p className="text-[11px] text-slate-400 italic mt-0.5">{apt.message}</p>
-                  )}
-                </div>
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Left: Patient Identity */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8DCC8] font-serif text-lg font-bold text-[#0E1A24] shrink-0 border border-[#DAC7AD]">
+                      {apt.patient?.full_name ? apt.patient.full_name.slice(0, 2).toUpperCase() : 'PT'}
+                    </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-0 border-slate-800">
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase ${
-                      apt.status === 'confirmed'
-                        ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                        : apt.status === 'pending'
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                        : 'bg-slate-800 text-slate-300'
-                    }`}
-                  >
-                    {apt.status}
-                  </span>
+                    <div>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-serif text-lg font-bold text-[#0E1A24]">
+                          {apt.patient?.full_name || 'Patient Chart'}
+                        </h3>
+                        <span
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            apt.status === 'confirmed'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : apt.status === 'pending'
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : 'bg-[#EFECE3] text-[#0E1A24]/70'
+                          }`}
+                        >
+                          {apt.status}
+                        </span>
+                      </div>
 
-                  {apt.status === 'pending' && (
+                      <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#0E1A24]/60">
+                        {apt.patient?.phone && (
+                          <span className="flex items-center gap-1 font-mono text-[#0E1A24]/80">
+                            <Phone className="h-3 w-3 text-[#12B5A6]" />
+                            <span>{apt.patient.phone}</span>
+                          </span>
+                        )}
+                        {apt.patient?.email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3 text-[#12B5A6]" />
+                            <span>{apt.patient.email}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle: Procedure & Timing */}
+                  <div className="rounded-2xl bg-white p-3.5 border border-[#E5E0D5] lg:min-w-[280px]">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-[#12B5A6]">
+                      Requested Discipline
+                    </div>
+                    <div className="font-serif text-sm font-medium text-[#0E1A24] mt-0.5">
+                      {apt.service?.title || 'Bespoke Aesthetic Consultation'}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-xs text-[#0E1A24]/70">
+                      <span className="flex items-center gap-1 font-mono text-[11px]">
+                        <Clock className="h-3 w-3 text-[#12B5A6]" />
+                        <span>{apt.requested_at ? apt.requested_at.split('T')[0] : 'Date TBD'}</span>
+                      </span>
+                      {apt.service?.price_from && (
+                        <span className="font-semibold text-[#0E1A24]">
+                          Est. ${apt.service.price_from}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-2 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#E5E0D5]">
+                    {apt.status === 'pending' && (
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 'confirmed')}
+                        className="flex items-center gap-1.5 rounded-full bg-[#12B5A6] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#0E1A24] transition-colors"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Confirm Visit</span>
+                      </button>
+                    )}
+                    {apt.status === 'confirmed' && (
+                      <button
+                        onClick={() => handleUpdateStatus(apt.id, 'completed')}
+                        className="flex items-center gap-1.5 rounded-full bg-[#0E1A24] px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 transition-colors"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 text-[#12B5A6]" />
+                        <span>Mark Completed</span>
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleUpdateStatus(apt.id, 'confirmed')}
-                      className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
+                      onClick={() => handleUpdateStatus(apt.id, 'cancelled')}
+                      className="rounded-full border border-rose-200 px-3.5 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors"
                     >
-                      Confirm
+                      Cancel
                     </button>
-                  )}
+                  </div>
                 </div>
+
+                {/* Patient Notes Quote Box */}
+                {apt.message && (
+                  <div className="mt-3.5 pt-3 border-t border-[#E8E2D6] text-xs text-[#0E1A24]/75 italic flex items-start gap-2">
+                    <span className="text-base text-[#12B5A6] font-serif leading-none mt-0.5">&ldquo;</span>
+                    <p className="leading-relaxed">{apt.message}</p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

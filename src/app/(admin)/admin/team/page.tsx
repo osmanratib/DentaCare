@@ -10,8 +10,9 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  Upload,
   User,
+  GraduationCap,
+  Sparkles,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -33,7 +34,6 @@ export default function AdminTeamPage() {
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
-  // Form State
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -105,7 +105,6 @@ export default function AdminTeamPage() {
     e.preventDefault()
 
     if (editingDoctor) {
-      // Update
       const { error } = await supabase
         .from('team_members')
         .update({
@@ -126,8 +125,7 @@ export default function AdminTeamPage() {
         fetchDoctors()
       }
     } else {
-      // Insert
-      const { data, error } = await supabase.from('team_members').insert([
+      const { error } = await supabase.from('team_members').insert([
         {
           name: formData.name,
           title: formData.title,
@@ -136,7 +134,7 @@ export default function AdminTeamPage() {
           sort_order: formData.sort_order,
           published: formData.published,
         },
-      ]).select()
+      ])
 
       if (error) {
         setMessage({ text: `Creation error: ${error.message}`, type: 'error' })
@@ -150,91 +148,88 @@ export default function AdminTeamPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+    <div className="space-y-8">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E0D5] pb-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-electric-teal">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#12B5A6]">
             Clinical Faculty Directory
           </span>
-          <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-medium text-white">
-            Doctors & Specialists
+          <h1 className="mt-1 font-serif text-3xl sm:text-4xl font-medium text-[#0E1A24]">
+            Specialists & Master Ceramists
           </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Real-time CRUD management directly connected to Supabase <code className="text-slate-300">team_members</code> table.
+          <p className="mt-1 text-xs text-[#0E1A24]/60">
+            Curate the attending physicians displayed on the public clinic website and booking wizards.
           </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="flex items-center justify-center gap-2 rounded-xl bg-electric-teal px-4 py-2.5 text-xs font-semibold text-slate-950 shadow-glow-teal hover:bg-white transition-colors"
+          className="flex items-center justify-center gap-2 rounded-full bg-[#0E1A24] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-[#12B5A6] transition-colors"
         >
-          <Plus className="h-4 w-4" />
-          <span>Add New Doctor</span>
+          <Plus className="h-4 w-4 text-[#12B5A6]" />
+          <span>Add Specialist</span>
         </button>
       </div>
 
-      {/* Notification Toast */}
       {message && (
         <div
           className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
             message.type === 'success'
-              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800'
-              : 'bg-red-950/70 text-red-300 border border-red-800'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border border-rose-200'
           }`}
         >
           {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           )}
           <span>{message.text}</span>
         </div>
       )}
 
-      {/* Loading state */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-slate-400">
-          Fetching doctor roster from Supabase...
+        <div className="py-16 text-center text-xs text-[#0E1A24]/50">
+          Loading clinical faculty...
         </div>
       ) : doctors.length === 0 ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-400">
-          No doctor profiles in the database. Click &ldquo;Add New Doctor&rdquo; above to create one.
+        <div className="rounded-4xl border border-[#E5E0D5] bg-white p-12 text-center text-xs text-[#0E1A24]/50">
+          No doctor profiles registered yet.
         </div>
       ) : (
-        /* Doctors Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
           {doctors.map((doc) => (
             <div
               key={doc.id}
-              className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 shadow-sm hover:border-slate-700 transition-colors flex flex-col justify-between"
+              className="group rounded-4xl border border-[#E5E0D5] bg-white p-6 shadow-[0_4px_24px_rgba(14,26,36,0.02)] transition-all hover:border-[#DAC7AD] hover:shadow-[0_8px_32px_rgba(14,26,36,0.06)] flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-start gap-4">
-                  <div className="relative h-16 w-16 rounded-2xl overflow-hidden bg-slate-800 shrink-0 border border-slate-700">
-                    {doc.photo_path ? (
-                      <Image
-                        src={doc.photo_path}
-                        alt={doc.name}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <User className="h-8 w-8 text-slate-500 m-auto mt-4" />
-                    )}
+                {/* Doctor Portrait Card */}
+                <div className="relative h-64 w-full rounded-3xl overflow-hidden bg-[#E8DCC8] mb-5 border border-[#DAC7AD]/40">
+                  {doc.photo_path ? (
+                    <Image
+                      src={doc.photo_path}
+                      alt={doc.name}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <User className="h-12 w-12 text-[#0E1A24]/30" />
+                    </div>
+                  )}
+
+                  <div className="absolute top-3 right-3 rounded-full bg-[#0E1A24]/80 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+                    Sort #{doc.sort_order}
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-serif text-lg font-medium text-white truncate">
-                      {doc.name}
-                    </h3>
-                    <p className="text-xs text-electric-teal font-medium mt-0.5">
-                      {doc.title || 'Specialist'}
-                    </p>
+
+                  <div className="absolute bottom-3 left-3">
                     <span
-                      className={`inline-block mt-2 rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase ${
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-md ${
                         doc.published
-                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                          : 'bg-slate-800 text-slate-400'
+                          ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-[#0E1A24]/80 text-[#FAF8F5]/60'
                       }`}
                     >
                       {doc.published ? 'Live on Site' : 'Draft'}
@@ -242,136 +237,142 @@ export default function AdminTeamPage() {
                   </div>
                 </div>
 
-                <p className="mt-4 text-xs text-slate-300 leading-relaxed line-clamp-3">
-                  {doc.bio || 'No clinical biography specified.'}
+                <div className="text-[11px] font-semibold uppercase tracking-widest text-[#12B5A6]">
+                  {doc.title || 'Cosmetic Specialist'}
+                </div>
+                <h3 className="mt-1 font-serif text-2xl font-bold text-[#0E1A24]">
+                  {doc.name}
+                </h3>
+
+                <p className="mt-3 text-xs text-[#0E1A24]/70 leading-relaxed font-light line-clamp-3">
+                  {doc.bio || 'Dedicated to unhurried, biological restorative excellence.'}
                 </p>
               </div>
 
-              <div className="flex items-center justify-between border-t border-slate-800 pt-3 text-xs">
-                <span className="text-[11px] text-slate-500">Order: #{doc.sort_order}</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpenEdit(doc)}
-                    className="flex items-center gap-1 rounded-lg bg-slate-800 px-2.5 py-1 text-slate-200 hover:bg-slate-700"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(doc.id, doc.name)}
-                    className="flex items-center gap-1 rounded-lg border border-red-900/60 px-2.5 py-1 text-red-400 hover:bg-red-950/40"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Delete</span>
-                  </button>
-                </div>
+              <div className="mt-6 flex items-center justify-end gap-2 pt-4 border-t border-[#F0ECE1]">
+                <button
+                  onClick={() => handleOpenEdit(doc)}
+                  className="rounded-full border border-[#DAC7AD] bg-[#FAF8F5] px-4 py-1.5 text-xs font-semibold text-[#0E1A24] hover:bg-[#0E1A24] hover:text-white transition-colors"
+                >
+                  Edit Profile
+                </button>
+                <button
+                  onClick={() => handleDelete(doc.id, doc.name)}
+                  className="rounded-full border border-rose-200 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* ADD / EDIT MODAL */}
+      {/* EDIT / ADD MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-slate-800 bg-slate-900 p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="font-serif text-xl font-medium text-white">
-                {editingDoctor ? 'Edit Doctor Profile' : 'Register New Specialist'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E1A24]/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-[#F0ECE1]">
+              <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
+                {editingDoctor ? 'Update Specialist Dossier' : 'Register Specialist to Faculty'}
               </h2>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-white"
-              >
+              <button onClick={() => setModalOpen(false)} className="text-[#0E1A24]/50 hover:text-[#0E1A24]">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Full Name & Credentials *</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Full Name & Diplomas *
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Dr. Alexander Ward, DDS, FICOI"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  placeholder="e.g. Dr. Osman Ratib, DDS, FICOI"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Clinical Role / Title *</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Clinical Title / Discipline *
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="e.g. Lead Ceramic Reconstruction Surgeon"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Photo URL (Portrait)</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Photo URL
+                </label>
                 <input
                   type="url"
                   value={formData.photo_path}
                   onChange={(e) => setFormData({ ...formData, photo_path: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Clinical Biography</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Biography & Credentials
+                </label>
                 <textarea
                   rows={4}
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Education, fellowships, patient philosophy..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  placeholder="Fellowships, academic background, philosophy of gentle care..."
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Display Sort Order</label>
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="docPub"
+                    checked={formData.published}
+                    onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
+                    className="h-4 w-4 rounded accent-[#12B5A6]"
+                  />
+                  <label htmlFor="docPub" className="text-xs font-semibold text-[#0E1A24] cursor-pointer">
+                    Publish in Public Directory
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs">
+                  <span>Sort Order:</span>
                   <input
                     type="number"
                     value={formData.sort_order}
                     onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white"
+                    className="w-16 rounded-xl border border-[#DAC7AD] bg-[#FAF8F5] p-1.5 text-center text-[#0E1A24]"
                   />
-                </div>
-
-                <div className="flex items-center gap-3 pt-6">
-                  <input
-                    type="checkbox"
-                    id="published"
-                    checked={formData.published}
-                    onChange={(e) => setFormData({ ...formData, published: e.target.checked })}
-                    className="h-4 w-4 rounded accent-electric-teal"
-                  />
-                  <label htmlFor="published" className="text-white cursor-pointer">
-                    Publish on Website
-                  </label>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#F0ECE1]">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-slate-700 px-4 py-2.5 text-slate-300 hover:bg-slate-800"
+                  className="rounded-full border border-[#DAC7AD] px-5 py-2.5 text-[#0E1A24]/70 hover:bg-[#FAF8F5]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-electric-teal px-5 py-2.5 font-semibold text-slate-950 hover:bg-white transition-colors"
+                  className="rounded-full bg-[#0E1A24] px-6 py-2.5 font-semibold text-white hover:bg-[#12B5A6] transition-colors shadow-sm"
                 >
-                  {editingDoctor ? 'Save Changes' : 'Insert Doctor'}
+                  Save to Database
                 </button>
               </div>
             </form>

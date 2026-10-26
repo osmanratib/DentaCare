@@ -12,6 +12,9 @@ import {
   Clock,
   User,
   X,
+  Phone,
+  Mail,
+  Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -44,7 +47,6 @@ export default function AppointmentsAdminPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
-  // New Appointment Form
   const [newPatientName, setNewPatientName] = useState('')
   const [newPatientPhone, setNewPatientPhone] = useState('')
   const [newPatientEmail, setNewPatientEmail] = useState('')
@@ -72,7 +74,6 @@ export default function AppointmentsAdminPage() {
     if (error) {
       console.error('Error fetching appointments:', error)
     } else if (data) {
-      // Normalize patient and service objects (Supabase can return arrays or objects)
       const normalized = data.map((item: any) => ({
         ...item,
         patient: Array.isArray(item.patient) ? item.patient[0] : item.patient,
@@ -81,7 +82,6 @@ export default function AppointmentsAdminPage() {
       setAppointments(normalized)
     }
 
-    // Fetch services for modal select
     const { data: svcData } = await supabase.from('services').select('id, title')
     if (svcData) {
       setServicesList(svcData)
@@ -104,7 +104,7 @@ export default function AppointmentsAdminPage() {
     if (error) {
       setMessage({ text: `Failed to update status: ${error.message}`, type: 'error' })
     } else {
-      setMessage({ text: `Appointment status updated to ${newStatus}.`, type: 'success' })
+      setMessage({ text: `Appointment marked as ${newStatus}.`, type: 'success' })
       setAppointments((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
       )
@@ -113,13 +113,13 @@ export default function AppointmentsAdminPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this appointment from the database?')) return
+    if (!confirm('Are you sure you want to cancel and remove this appointment?')) return
 
     const { error } = await supabase.from('appointments').delete().eq('id', id)
     if (error) {
       setMessage({ text: `Failed to delete: ${error.message}`, type: 'error' })
     } else {
-      setMessage({ text: 'Appointment deleted from database.', type: 'success' })
+      setMessage({ text: 'Appointment removed from schedule.', type: 'success' })
       setAppointments((prev) => prev.filter((a) => a.id !== id))
     }
     setTimeout(() => setMessage(null), 3000)
@@ -128,7 +128,6 @@ export default function AppointmentsAdminPage() {
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // 1. Upsert patient
     const { data: patient, error: pError } = await supabase
       .from('patients')
       .upsert(
@@ -147,7 +146,6 @@ export default function AppointmentsAdminPage() {
       return
     }
 
-    // 2. Insert appointment
     const { error: aError } = await supabase.from('appointments').insert([
       {
         patient_id: patient.id,
@@ -162,10 +160,9 @@ export default function AppointmentsAdminPage() {
     if (aError) {
       setMessage({ text: `Appointment creation error: ${aError.message}`, type: 'error' })
     } else {
-      setMessage({ text: 'New appointment booked and saved to database.', type: 'success' })
+      setMessage({ text: 'New appointment booked and saved into database.', type: 'success' })
       setModalOpen(false)
       fetchAppointments()
-      // reset form
       setNewPatientName('')
       setNewPatientPhone('')
       setNewPatientEmail('')
@@ -208,35 +205,35 @@ export default function AppointmentsAdminPage() {
   })
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+    <div className="space-y-8">
+      {/* Editorial Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E0D5] pb-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-electric-teal">
-            Clinical Operations
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#12B5A6]">
+            Clinical Schedule Matrix
           </span>
-          <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-medium text-white">
-            Appointment Pipeline & Registry
+          <h1 className="mt-1 font-serif text-3xl sm:text-4xl font-medium text-[#0E1A24]">
+            Appointment Pipeline
           </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            Real-time CRUD operations linked directly to Supabase <code className="text-slate-300">appointments</code>.
+          <p className="mt-1 text-xs text-[#0E1A24]/60">
+            Real-time synchronization with patient bookings, consultations, and operatory reservations.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={exportCSV}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700"
+            className="flex items-center gap-2 rounded-full border border-[#DAC7AD] bg-white px-4 py-2 text-xs font-semibold text-[#0E1A24] hover:bg-[#FAF8F5] transition-colors shadow-sm"
           >
-            <Download className="h-3.5 w-3.5" />
+            <Download className="h-3.5 w-3.5 text-[#12B5A6]" />
             <span>Export CSV</span>
           </button>
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-electric-teal px-4 py-2 text-xs font-semibold text-slate-950 shadow-glow-teal hover:bg-white transition-colors"
+            className="flex items-center gap-2 rounded-full bg-[#0E1A24] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-[#12B5A6] transition-colors"
           >
-            <Plus className="h-4 w-4" />
-            <span>Add Appointment</span>
+            <Plus className="h-4 w-4 text-[#12B5A6]" />
+            <span>Book Visit</span>
           </button>
         </div>
       </div>
@@ -245,29 +242,29 @@ export default function AppointmentsAdminPage() {
         <div
           className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
             message.type === 'success'
-              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800'
-              : 'bg-red-950/70 text-red-300 border border-red-800'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border border-rose-200'
           }`}
         >
           {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           )}
           <span>{message.text}</span>
         </div>
       )}
 
       {/* Filter toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-[#0E1A24]/40" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by patient name, phone, or treatment..."
-            className="w-full rounded-2xl border border-slate-800 bg-slate-900 py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-slate-500 focus:border-electric-teal focus:outline-none"
+            placeholder="Search patient, phone, or treatment..."
+            className="w-full rounded-2xl border border-[#DAC7AD] bg-white py-2.5 pl-10 pr-4 text-xs text-[#0E1A24] placeholder:text-[#0E1A24]/40 focus:border-[#12B5A6] focus:outline-none shadow-sm"
           />
         </div>
 
@@ -276,10 +273,10 @@ export default function AppointmentsAdminPage() {
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`rounded-xl px-3 py-1.5 text-xs uppercase font-medium tracking-wider transition-colors ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
                 statusFilter === st
-                  ? 'bg-electric-teal text-slate-950 font-bold'
-                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  ? 'bg-[#0E1A24] text-white shadow-sm'
+                  : 'bg-white text-[#0E1A24]/70 hover:bg-[#FAF8F5] border border-[#E5E0D5]'
               }`}
             >
               {st}
@@ -288,188 +285,165 @@ export default function AppointmentsAdminPage() {
         </div>
       </div>
 
+      {/* List / Cards */}
       {loading ? (
-        <div className="py-12 text-center text-xs text-slate-400">
-          Fetching live appointments from Supabase...
+        <div className="py-16 text-center text-xs text-[#0E1A24]/50">
+          Loading appointments from Supabase...
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/40 p-8 text-center text-xs text-slate-400">
-          No appointments found matching this filter. Click &ldquo;Add Appointment&rdquo; to insert one.
+        <div className="rounded-4xl border border-[#E5E0D5] bg-white p-12 text-center text-xs text-[#0E1A24]/50">
+          No appointments found matching this criteria.
         </div>
       ) : (
-        <>
-          {/* DESKTOP TABLE VIEW */}
-          <div className="hidden md:block rounded-3xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 text-[10px] uppercase tracking-wider text-slate-400">
-                    <th className="py-3 px-5">Patient Details</th>
-                    <th className="py-3 px-5">Procedure</th>
-                    <th className="py-3 px-5">Date & Notes</th>
-                    <th className="py-3 px-5">Status</th>
-                    <th className="py-3 px-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {filtered.map((apt) => (
-                    <tr key={apt.id} className="hover:bg-slate-800/20">
-                      <td className="py-4 px-5">
-                        <div className="font-semibold text-white">
-                          {apt.patient?.full_name || 'Unassigned Patient'}
-                        </div>
-                        <div className="text-[11px] text-slate-300">{apt.patient?.phone}</div>
-                        <div className="text-[10px] text-slate-500">{apt.patient?.email}</div>
-                      </td>
-                      <td className="py-4 px-5 text-slate-200">
-                        <div className="font-medium text-white">
-                          {apt.service?.title || 'General Consultation'}
-                        </div>
-                        <span className="text-[10px] font-mono text-electric-teal">
-                          ID: {apt.id.slice(0, 8)}...
-                        </span>
-                      </td>
-                      <td className="py-4 px-5 text-slate-300">
-                        <div className="font-mono text-[11px]">
-                          {apt.requested_at ? apt.requested_at.split('T')[0] : 'TBD'}
-                        </div>
-                        {apt.message && (
-                          <p className="mt-1 text-[11px] text-slate-400 line-clamp-1">
-                            {apt.message}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-4 px-5">
-                        <select
-                          value={apt.status}
-                          onChange={(e) => handleStatusChange(apt.id, e.target.value)}
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-200 focus:border-electric-teal focus:outline-none"
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
-                      <td className="py-4 px-5 text-right">
-                        <button
-                          onClick={() => handleDelete(apt.id)}
-                          className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-slate-800 transition-colors"
-                          title="Delete Appointment"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* MOBILE CARDS VIEW */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
-            {filtered.map((apt) => (
-              <div
-                key={apt.id}
-                className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 space-y-3"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-white text-sm">
-                      {apt.patient?.full_name || 'Unassigned Patient'}
-                    </h3>
-                    <p className="text-xs text-electric-teal">{apt.patient?.phone}</p>
+        <div className="space-y-4">
+          {filtered.map((apt) => (
+            <div
+              key={apt.id}
+              className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] hover:border-[#DAC7AD] hover:shadow-[0_4px_24px_rgba(14,26,36,0.05)] transition-all"
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                {/* Left: Patient */}
+                <div className="flex items-start gap-3.5">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8DCC8] font-serif text-base font-bold text-[#0E1A24] shrink-0 border border-[#DAC7AD]">
+                    {apt.patient?.full_name ? apt.patient.full_name.slice(0, 2).toUpperCase() : 'PT'}
                   </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-serif text-lg font-bold text-[#0E1A24]">
+                        {apt.patient?.full_name || 'Patient Chart'}
+                      </h3>
+                      <span className="font-mono text-[10px] text-[#0E1A24]/40">
+                        ({apt.id.slice(0, 8)})
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#0E1A24]/60">
+                      {apt.patient?.phone && (
+                        <span className="flex items-center gap-1 font-mono text-[#0E1A24]">
+                          <Phone className="h-3 w-3 text-[#12B5A6]" />
+                          <span>{apt.patient.phone}</span>
+                        </span>
+                      )}
+                      {apt.patient?.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3 text-[#12B5A6]" />
+                          <span>{apt.patient.email}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Middle: Procedure & Date */}
+                <div className="rounded-2xl bg-[#FAF8F5] p-3 border border-[#E5E0D5] lg:min-w-[260px]">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[#12B5A6]">
+                    Treatment Ceremony
+                  </div>
+                  <div className="font-serif text-sm font-medium text-[#0E1A24] mt-0.5">
+                    {apt.service?.title || 'Comprehensive Aesthetic Consultation'}
+                  </div>
+                  <div className="mt-1 text-xs text-[#0E1A24]/70 flex items-center gap-1.5 font-mono">
+                    <Clock className="h-3 w-3 text-[#12B5A6]" />
+                    <span>{apt.requested_at ? apt.requested_at.split('T')[0] : 'Date TBD'}</span>
+                  </div>
+                </div>
+
+                {/* Right: Status Workflow & Actions */}
+                <div className="flex items-center justify-between lg:justify-end gap-3 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#F0ECE1]">
+                  <select
+                    value={apt.status}
+                    onChange={(e) => handleStatusChange(apt.id, e.target.value)}
+                    className="rounded-full border border-[#DAC7AD] bg-white px-3 py-1.5 text-xs font-semibold text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none shadow-sm"
+                  >
+                    <option value="pending">🟡 Pending Triage</option>
+                    <option value="confirmed">🟢 Confirmed</option>
+                    <option value="completed">🔵 Completed</option>
+                    <option value="cancelled">🔴 Cancelled</option>
+                  </select>
+
                   <button
                     onClick={() => handleDelete(apt.id)}
-                    className="p-1 text-slate-400 hover:text-red-400"
+                    className="p-2 text-[#0E1A24]/40 hover:text-rose-600 rounded-full hover:bg-rose-50 transition-colors"
+                    title="Remove Appointment"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-
-                <div className="text-xs text-slate-300">
-                  <div className="font-medium text-white">{apt.service?.title || 'General Consultation'}</div>
-                  <div className="text-slate-400 text-[11px] mt-0.5">
-                    Date: {apt.requested_at ? apt.requested_at.split('T')[0] : 'TBD'}
-                  </div>
-                  {apt.message && <p className="mt-1 text-[11px] text-slate-400">{apt.message}</p>}
-                </div>
-
-                <div className="flex items-center justify-between border-t border-slate-800 pt-2">
-                  <span className="text-[11px] text-slate-400">Status:</span>
-                  <select
-                    value={apt.status}
-                    onChange={(e) => handleStatusChange(apt.id, e.target.value)}
-                    className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-white"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
               </div>
-            ))}
-          </div>
-        </>
+
+              {/* Message */}
+              {apt.message && (
+                <div className="mt-3.5 pt-3 border-t border-[#F0ECE1] text-xs text-[#0E1A24]/75 italic flex items-start gap-1.5">
+                  <span className="text-[#12B5A6] font-serif text-base leading-none">&ldquo;</span>
+                  <p>{apt.message}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* CREATE APPOINTMENT MODAL */}
+      {/* CREATE MODAL */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-slate-800 bg-slate-900 p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-              <h2 className="font-serif text-xl font-medium text-white">Book New Appointment</h2>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E1A24]/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-[#F0ECE1]">
+              <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">Book Priority Appointment</h2>
+              <button onClick={() => setModalOpen(false)} className="text-[#0E1A24]/50 hover:text-[#0E1A24]">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateAppointment} className="mt-6 space-y-4 text-xs">
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Patient Full Name *</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Patient Full Name *
+                </label>
                 <input
                   type="text"
                   required
                   value={newPatientName}
                   onChange={(e) => setNewPatientName(e.target.value)}
-                  placeholder="e.g. Charlotte Montgomery"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  placeholder="e.g. Harrison Blake"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Phone Number *</label>
+                  <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                    Phone Number *
+                  </label>
                   <input
                     type="tel"
                     required
                     value={newPatientPhone}
                     onChange={(e) => setNewPatientPhone(e.target.value)}
                     placeholder="+1 (555) 000-0000"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Email Address</label>
+                  <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={newPatientEmail}
                     onChange={(e) => setNewPatientEmail(e.target.value)}
                     placeholder="patient@domain.com"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Select Procedure *</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Procedure *
+                </label>
                 <select
                   value={newServiceId}
                   onChange={(e) => setNewServiceId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white focus:border-electric-teal focus:outline-none"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
                 >
                   {servicesList.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -481,21 +455,25 @@ export default function AppointmentsAdminPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Appointment Date *</label>
+                  <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                    Date *
+                  </label>
                   <input
                     type="date"
                     required
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Time Slot</label>
+                  <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                    Time Slot
+                  </label>
                   <select
                     value={newTime}
                     onChange={(e) => setNewTime(e.target.value)}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
                   >
                     <option>09:00 AM</option>
                     <option>10:00 AM</option>
@@ -508,29 +486,31 @@ export default function AppointmentsAdminPage() {
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-medium">Internal Clinical Notes</label>
+                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
+                  Internal Clinical Notes
+                </label>
                 <textarea
                   rows={3}
                   value={newNotes}
                   onChange={(e) => setNewNotes(e.target.value)}
-                  placeholder="Notes from initial telephone intake..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white"
+                  placeholder="Patient requests, anesthesia preferences..."
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#F0ECE1]">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl border border-slate-700 px-4 py-2.5 text-slate-300 hover:bg-slate-800"
+                  className="rounded-full border border-[#DAC7AD] px-5 py-2.5 text-[#0E1A24]/70 hover:bg-[#FAF8F5]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-electric-teal px-5 py-2.5 font-semibold text-slate-950 hover:bg-white transition-colors"
+                  className="rounded-full bg-[#0E1A24] px-6 py-2.5 font-semibold text-white hover:bg-[#12B5A6] transition-colors shadow-sm"
                 >
-                  Confirm & Insert
+                  Confirm & Reserve
                 </button>
               </div>
             </form>

@@ -2,22 +2,26 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  LayoutDashboard,
   Calendar,
   Users,
   Clock,
   Sparkles,
   Settings,
   LogOut,
-  ShieldCheck,
   Star,
   Stethoscope,
   Briefcase,
   Menu,
   X,
   ExternalLink,
+  Search,
+  Bell,
+  Plus,
+  ShieldCheck,
+  CheckCircle2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -40,21 +44,20 @@ export default function AdminLayout({
     })
   }, [supabase])
 
-  // Don't render shell on the login page itself
   if (pathname === '/admin/login') {
     return <>{children}</>
   }
 
   const navLinks = [
-    { label: 'Overview', href: '/admin', icon: LayoutDashboard },
-    { label: 'Appointments', href: '/admin/appointments', icon: Calendar },
-    { label: 'Patients', href: '/admin/patients', icon: Users },
-    { label: 'Doctors / Faculty', href: '/admin/team', icon: Stethoscope },
-    { label: 'Treatments / Services', href: '/admin/services', icon: Briefcase },
-    { label: 'Availability & Slots', href: '/admin/availability', icon: Clock },
-    { label: 'Smile Gallery', href: '/admin/gallery', icon: Sparkles },
-    { label: 'Reviews', href: '/admin/reviews', icon: Star },
-    { label: 'Audit & Settings', href: '/admin/settings', icon: Settings },
+    { label: 'Clinic Overview', href: '/admin', icon: Calendar, badge: 'Live' },
+    { label: 'Appointments Matrix', href: '/admin/appointments', icon: Clock },
+    { label: 'Patient Directory', href: '/admin/patients', icon: Users },
+    { label: 'Clinical Faculty', href: '/admin/team', icon: Stethoscope },
+    { label: 'Treatment Menu', href: '/admin/services', icon: Briefcase },
+    { label: 'Operating Windows', href: '/admin/availability', icon: Clock },
+    { label: 'Smile Transformations', href: '/admin/gallery', icon: Sparkles },
+    { label: 'Patient Testimonials', href: '/admin/reviews', icon: Star },
+    { label: 'Clinic Governance', href: '/admin/settings', icon: Settings },
   ]
 
   const handleLogout = async () => {
@@ -63,35 +66,75 @@ export default function AdminLayout({
     router.refresh()
   }
 
+  // Format today's human date
+  const todayStr = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date())
+
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-72 flex-col justify-between border-r border-slate-800 bg-slate-900/90 p-6 backdrop-blur-xl shrink-0">
+    <div className="flex min-h-screen bg-[#F4F1EA] text-[#0E1A24] font-sans antialiased selection:bg-[#12B5A6] selection:text-white">
+      {/* ===================================================================
+          DESKTOP SIDEBAR: Warm Architectural Luxury Shell
+         =================================================================== */}
+      <aside className="hidden lg:flex w-72 flex-col justify-between border-r border-[#E5E0D5] bg-[#FAF8F5] p-6 shrink-0 shadow-[4px_0_24px_rgba(14,26,36,0.02)]">
         <div>
-          {/* Clinic Brand */}
-          <Link href="/admin" className="flex items-center gap-3 px-2 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-electric-teal text-slate-950 font-bold shadow-glow-teal">
-              <Sparkles className="h-5 w-5" />
+          {/* Clinic Brand Mark */}
+          <Link href="/admin" className="group flex items-center gap-3.5 px-2 py-2">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0E1A24] text-[#FAF8F5] shadow-sm transition-transform duration-300 group-hover:scale-105">
+              <Sparkles className="h-5 w-5 text-[#12B5A6]" />
             </div>
             <div>
-              <div className="font-serif text-lg font-bold tracking-tight text-white">
-                DentaCare <span className="text-xs text-electric-teal font-sans">HQ</span>
+              <div className="font-serif text-xl font-bold tracking-tight text-[#0E1A24]">
+                Denta<span className="italic text-[#12B5A6]">Care</span>
               </div>
-              <div className="text-[10px] text-slate-400">Clinic Staff Command</div>
+              <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-[#0E1A24]/50">
+                Staff Sanctuary HQ
+              </div>
             </div>
           </Link>
 
-          {/* Security Status Badge */}
-          <div className="mt-5 rounded-2xl bg-emerald-950/40 border border-emerald-800/40 p-3 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <ShieldCheck className="h-4 w-4" />
-              <span>PostgreSQL & RLS Connected</span>
+          {/* Attending Doctor Profile Card */}
+          <div className="mt-6 rounded-3xl border border-[#E8E2D6] bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="relative h-12 w-12 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]">
+                <Image
+                  src="/images/dr-osman.jpg"
+                  alt="Dr. Osman Ratib"
+                  fill
+                  className="object-cover"
+                />
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-serif text-sm font-bold text-[#0E1A24] truncate">
+                  Dr. Osman Ratib
+                </div>
+                <div className="text-[11px] text-[#12B5A6] font-medium truncate">
+                  Lead Aesthetic Surgeon
+                </div>
+                <div className="text-[9px] uppercase tracking-wider text-[#0E1A24]/40 font-semibold mt-0.5">
+                  Owner Admin
+                </div>
+              </div>
             </div>
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+
+            <div className="mt-3.5 pt-3 border-t border-[#F0ECE1] flex items-center justify-between text-[11px]">
+              <span className="flex items-center gap-1.5 text-emerald-700 font-medium">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Clinic Open
+              </span>
+              <span className="text-[#0E1A24]/50 font-mono text-[10px]">Operatory 1</span>
+            </div>
           </div>
 
           {/* Navigation Links */}
           <nav className="mt-6 space-y-1">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-[#0E1A24]/40 px-3 mb-2">
+              Clinical Workspace
+            </div>
             {navLinks.map((link) => {
               const Icon = link.icon
               const isActive = pathname === link.href
@@ -99,104 +142,121 @@ export default function AdminLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-medium transition-all ${
+                  className={`group flex items-center justify-between rounded-2xl px-3.5 py-2.5 text-xs font-medium transition-all ${
                     isActive
-                      ? 'bg-electric-teal text-slate-950 font-semibold shadow-glow-teal'
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'bg-[#0E1A24] text-white shadow-sm font-semibold'
+                      : 'text-[#0E1A24]/70 hover:bg-[#EFECE3] hover:text-[#0E1A24]'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon
+                      className={`h-4 w-4 transition-colors ${
+                        isActive ? 'text-[#12B5A6]' : 'text-[#0E1A24]/45 group-hover:text-[#0E1A24]'
+                      }`}
+                    />
                     <span>{link.label}</span>
                   </div>
+                  {link.badge && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                        isActive
+                          ? 'bg-[#12B5A6] text-[#0E1A24]'
+                          : 'bg-[#CFE8E4] text-[#0E1A24]'
+                      }`}
+                    >
+                      {link.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
           </nav>
         </div>
 
-        {/* User Card & Logout */}
-        <div className="border-t border-slate-800 pt-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="truncate pr-2">
-              <div className="text-xs font-semibold text-white">Dr. Osman Ratib</div>
-              <div className="text-[10px] text-slate-400 truncate">{userEmail}</div>
-              <div className="text-[9px] uppercase tracking-wider text-electric-teal font-bold mt-0.5">
-                Owner Administrator
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors shrink-0"
-              title="Sign Out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+        {/* Footer info & Logout */}
+        <div className="border-t border-[#E5E0D5] pt-4">
+          <Link
+            href="/"
+            target="_blank"
+            className="flex items-center justify-between rounded-xl p-2.5 text-xs text-[#0E1A24]/70 hover:bg-[#EFECE3] hover:text-[#0E1A24] transition-colors mb-2"
+          >
+            <span className="flex items-center gap-2">
+              <ExternalLink className="h-3.5 w-3.5 text-[#12B5A6]" />
+              <span>Public Patient Site</span>
+            </span>
+            <span className="text-[10px] text-[#0E1A24]/40">↗</span>
+          </Link>
 
-          <div className="mt-3 pt-3 border-t border-slate-800/60">
-            <Link
-              href="/"
-              target="_blank"
-              className="flex items-center justify-between text-[11px] text-slate-400 hover:text-white px-2 py-1"
-            >
-              <span>View Public Site</span>
-              <ExternalLink className="h-3 w-3" />
-            </Link>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 w-full rounded-xl p-2.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign Out of Terminal</span>
+          </button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* ===================================================================
+          MAIN WORKSPACE AREA
+         =================================================================== */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-800 bg-slate-900/90 px-4 sm:px-6 backdrop-blur-md">
+        {/* Top Floating Glass Header */}
+        <header className="sticky top-0 z-30 flex h-18 items-center justify-between border-b border-[#E5E0D5] bg-[#FAF8F5]/90 px-4 sm:px-8 py-4 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-              aria-label="Open mobile menu"
+              className="lg:hidden p-2 rounded-xl bg-white text-[#0E1A24] border border-[#E5E0D5] hover:bg-[#EFECE3]"
+              aria-label="Open clinical menu"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="text-xs text-slate-400 hidden sm:block">
-              Database: <span className="font-mono text-electric-teal">Connected (qknsobdwmngzyriptptd)</span>
+            <div>
+              <div className="font-serif text-sm font-medium text-[#0E1A24] hidden sm:block">
+                {todayStr}
+              </div>
+              <div className="text-[11px] text-[#0E1A24]/50 hidden sm:flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span>Supabase Live Sync • Manhattan Operatories</span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
               href="/admin/appointments"
-              className="rounded-full bg-electric-teal px-3.5 py-1.5 text-xs font-semibold text-slate-950 shadow-glow-teal hover:bg-white transition-colors"
+              className="flex items-center gap-1.5 rounded-full bg-[#0E1A24] px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-[#12B5A6] transition-colors"
             >
-              + Booking
+              <Plus className="h-3.5 w-3.5 text-[#12B5A6]" />
+              <span>New Intake</span>
             </Link>
-            <span className="text-xs text-slate-400 hidden md:inline">
-              Owner: <strong className="text-slate-200">{userEmail}</strong>
-            </span>
+
+            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-[#E5E0D5]">
+              <span className="text-[11px] text-[#0E1A24]/60">Logged in as:</span>
+              <span className="text-xs font-semibold text-[#0E1A24]">{userEmail}</span>
+            </div>
           </div>
         </header>
 
-        {/* Mobile Navigation Drawer with Overlay */}
+        {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
-            {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-[#0E1A24]/60 backdrop-blur-sm"
               onClick={() => setMobileMenuOpen(false)}
             />
-
-            {/* Drawer */}
-            <div className="fixed inset-y-0 left-0 w-72 bg-slate-900 p-6 flex flex-col justify-between shadow-2xl border-r border-slate-800 overflow-y-auto">
+            <div className="fixed inset-y-0 left-0 w-72 bg-[#FAF8F5] p-6 flex flex-col justify-between shadow-2xl border-r border-[#E5E0D5] overflow-y-auto">
               <div>
-                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div className="flex items-center justify-between pb-4 border-b border-[#E5E0D5]">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 text-electric-teal" />
-                    <span className="font-serif text-lg font-bold text-white">DentaCare HQ</span>
+                    <Sparkles className="h-5 w-5 text-[#12B5A6]" />
+                    <span className="font-serif text-lg font-bold text-[#0E1A24]">
+                      DentaCare HQ
+                    </span>
                   </div>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-white"
+                    className="p-1 rounded-lg text-[#0E1A24]/60 hover:text-[#0E1A24]"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -213,8 +273,8 @@ export default function AdminLayout({
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 rounded-xl p-3 text-xs ${
                           isActive
-                            ? 'bg-electric-teal text-slate-950 font-bold'
-                            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                            ? 'bg-[#0E1A24] text-white font-bold'
+                            : 'text-[#0E1A24]/70 hover:bg-[#EFECE3]'
                         }`}
                       >
                         <Icon className="h-4 w-4" />
@@ -225,10 +285,10 @@ export default function AdminLayout({
                 </nav>
               </div>
 
-              <div className="pt-4 border-t border-slate-800">
+              <div className="pt-4 border-t border-[#E5E0D5]">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 w-full p-2.5 text-xs text-red-400 hover:bg-slate-800 rounded-xl"
+                  className="flex items-center gap-2 w-full p-2.5 text-xs text-rose-600 hover:bg-rose-50 rounded-xl"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
@@ -238,7 +298,10 @@ export default function AdminLayout({
           </div>
         )}
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">{children}</main>
+        {/* Content Shell */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-10 max-w-7xl w-full mx-auto">
+          {children}
+        </main>
       </div>
     </div>
   )

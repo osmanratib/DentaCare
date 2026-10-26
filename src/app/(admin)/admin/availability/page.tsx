@@ -9,16 +9,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Save,
+  Shield,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-
-interface AvailabilityRule {
-  id?: string
-  weekday: number
-  start_time: string
-  end_time: string
-  slot_min: number
-}
 
 interface BlockedDate {
   date: string
@@ -48,7 +41,6 @@ export default function AvailabilityAdminPage() {
   const fetchAvailability = async () => {
     setLoading(true)
 
-    // Fetch rules from Supabase
     const { data: rulesData } = await supabase.from('availability_rules').select('*')
     if (rulesData && rulesData.length > 0) {
       setDays((prev) =>
@@ -68,7 +60,6 @@ export default function AvailabilityAdminPage() {
       setSlotDuration(rulesData[0].slot_min || 30)
     }
 
-    // Fetch blocked dates from Supabase
     const { data: blockedData } = await supabase.from('blocked_dates').select('*').order('date', { ascending: true })
     if (blockedData) {
       setBlockedDates(blockedData)
@@ -84,7 +75,6 @@ export default function AvailabilityAdminPage() {
   const handleSaveWeeklyRules = async () => {
     setLoading(true)
 
-    // Delete existing rules then insert updated active days
     await supabase.from('availability_rules').delete().neq('weekday', 99)
 
     const activeRules = days
@@ -101,7 +91,7 @@ export default function AvailabilityAdminPage() {
     if (error) {
       setMessage({ text: `Failed to save: ${error.message}`, type: 'error' })
     } else {
-      setMessage({ text: 'Weekly availability schedule saved to Supabase.', type: 'success' })
+      setMessage({ text: 'Weekly operatory hours saved into database.', type: 'success' })
     }
     setLoading(false)
     setTimeout(() => setMessage(null), 3000)
@@ -114,7 +104,7 @@ export default function AvailabilityAdminPage() {
     const { error } = await supabase.from('blocked_dates').upsert([
       {
         date: newBlockedDate,
-        reason: newBlockedReason || 'Clinic Closed / Staff Training',
+        reason: newBlockedReason || 'Clinic Closed',
       },
     ])
 
@@ -145,28 +135,28 @@ export default function AvailabilityAdminPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E0D5] pb-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-electric-teal">
-            Scheduling Matrix
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#12B5A6]">
+            Clinical Rhythm & Calendars
           </span>
-          <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-medium text-white">
-            Clinic Hours & Time Slots
+          <h1 className="mt-1 font-serif text-3xl sm:text-4xl font-medium text-[#0E1A24]">
+            Operatory Windows & Time Slots
           </h1>
-          <p className="mt-1 text-xs text-slate-400">
-            CRUD operations connected directly to Supabase <code className="text-slate-300">availability_rules</code> and <code className="text-slate-300">blocked_dates</code>.
+          <p className="mt-1 text-xs text-[#0E1A24]/60">
+            Define daily operating hours, patient chair-time buffers, and holiday closures.
           </p>
         </div>
 
         <button
           onClick={handleSaveWeeklyRules}
           disabled={loading}
-          className="flex items-center justify-center gap-2 rounded-xl bg-electric-teal px-5 py-2.5 text-xs font-semibold text-slate-950 shadow-glow-teal hover:bg-white transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 rounded-full bg-[#0E1A24] px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-white shadow-sm hover:bg-[#12B5A6] transition-colors disabled:opacity-50"
         >
-          <Save className="h-4 w-4" />
-          <span>Save Operating Rules</span>
+          <Save className="h-4 w-4 text-[#12B5A6]" />
+          <span>Save Schedule</span>
         </button>
       </div>
 
@@ -174,32 +164,34 @@ export default function AvailabilityAdminPage() {
         <div
           className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
             message.type === 'success'
-              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800'
-              : 'bg-red-950/70 text-red-300 border border-red-800'
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border border-rose-200'
           }`}
         >
           {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
           ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
           )}
           <span>{message.text}</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Weekly Hours Editor */}
-        <div className="lg:col-span-7 rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-5">
-          <h3 className="font-serif text-xl font-medium text-white">Weekly Operating Windows</h3>
-          <p className="text-xs text-slate-400">
-            Toggle days and adjust open/close hours. Appointments on the public site reflect these active windows.
-          </p>
+        {/* Weekly Hours */}
+        <div className="lg:col-span-7 rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 space-y-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)]">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-[#0E1A24]">Weekly Practice Hours</h2>
+            <p className="text-xs text-[#0E1A24]/60 mt-1">
+              Active days will generate selectable consultation slots in the public booking engine.
+            </p>
+          </div>
 
           <div className="space-y-3">
             {days.map((day, idx) => (
               <div
                 key={day.name}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-xs"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#E5E0D5] bg-[#FAF8F5] p-4 text-xs"
               >
                 <div className="flex items-center gap-3">
                   <input
@@ -211,15 +203,15 @@ export default function AvailabilityAdminPage() {
                       updated[idx].active = e.target.checked
                       setDays(updated)
                     }}
-                    className="h-4 w-4 rounded accent-electric-teal"
+                    className="h-4 w-4 rounded accent-[#12B5A6]"
                   />
-                  <label htmlFor={`day-${day.weekday}`} className="font-semibold text-white cursor-pointer">
+                  <label htmlFor={`day-${day.weekday}`} className="font-serif font-bold text-sm text-[#0E1A24] cursor-pointer">
                     {day.name}
                   </label>
                 </div>
 
                 {day.active ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-xs">
                     <input
                       type="time"
                       value={day.open.slice(0, 5)}
@@ -228,9 +220,9 @@ export default function AvailabilityAdminPage() {
                         updated[idx].open = e.target.value
                         setDays(updated)
                       }}
-                      className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200"
+                      className="rounded-xl border border-[#DAC7AD] bg-white px-2.5 py-1 text-xs text-[#0E1A24]"
                     />
-                    <span className="text-slate-500">to</span>
+                    <span className="text-[#0E1A24]/40">to</span>
                     <input
                       type="time"
                       value={day.close.slice(0, 5)}
@@ -239,82 +231,84 @@ export default function AvailabilityAdminPage() {
                         updated[idx].close = e.target.value
                         setDays(updated)
                       }}
-                      className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200"
+                      className="rounded-xl border border-[#DAC7AD] bg-white px-2.5 py-1 text-xs text-[#0E1A24]"
                     />
                   </div>
                 ) : (
-                  <span className="text-slate-500 italic">Operatories Closed</span>
+                  <span className="text-xs text-[#0E1A24]/40 italic">Closed for VIP / Private Care</span>
                 )}
               </div>
             ))}
           </div>
 
-          <div className="pt-4 border-t border-slate-800">
-            <label className="block text-slate-400 mb-2 font-medium text-xs">
-              Default Consultation Slot Length
+          <div className="pt-4 border-t border-[#F0ECE1]">
+            <label className="block text-xs font-semibold text-[#0E1A24]/70 mb-2">
+              Default Appointment Slot Buffer
             </label>
             <select
               value={slotDuration}
               onChange={(e) => setSlotDuration(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-xs text-white"
+              className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-xs text-[#0E1A24]"
             >
               <option value={30}>30 Minutes</option>
-              <option value={45}>45 Minutes</option>
-              <option value={60}>60 Minutes (Comprehensive)</option>
-              <option value={90}>90 Minutes (Surgical suite)</option>
+              <option value={45}>45 Minutes (Recommended for Veneers)</option>
+              <option value={60}>60 Minutes (Full Mouth Rehabilitation)</option>
+              <option value={90}>90 Minutes (Surgical Implant Placement)</option>
             </select>
           </div>
         </div>
 
-        {/* Blocked Dates Editor */}
-        <div className="lg:col-span-5 rounded-3xl border border-slate-800 bg-slate-900/60 p-6 space-y-5">
-          <h3 className="font-serif text-xl font-medium text-white">Blocked Dates & Holidays</h3>
-          <p className="text-xs text-slate-400">
-            Dates added here prevent patients from reserving appointments on the public site.
-          </p>
+        {/* Blocked Dates */}
+        <div className="lg:col-span-5 rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 space-y-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)]">
+          <div>
+            <h2 className="font-serif text-2xl font-bold text-[#0E1A24]">Blocked Dates & Solstices</h2>
+            <p className="text-xs text-[#0E1A24]/60 mt-1">
+              Dates marked here are locked out across all public scheduling touchpoints.
+            </p>
+          </div>
 
-          <form onSubmit={handleAddBlockedDate} className="space-y-3 rounded-2xl bg-slate-950 p-4 border border-slate-800">
-            <span className="text-xs font-semibold text-white block">Block a Specific Date</span>
+          <form onSubmit={handleAddBlockedDate} className="space-y-3 rounded-3xl bg-[#FAF8F5] p-4 border border-[#E5E0D5]">
+            <span className="text-xs font-semibold text-[#0E1A24] block">Block a Specific Date</span>
             <input
               type="date"
               required
               value={newBlockedDate}
               onChange={(e) => setNewBlockedDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+              className="w-full rounded-2xl border border-[#DAC7AD] bg-white p-2.5 text-xs text-[#0E1A24]"
             />
             <input
               type="text"
-              placeholder="Reason (e.g. Renovation / Holiday)"
+              placeholder="Reason (e.g. European Dental Conference)"
               value={newBlockedReason}
               onChange={(e) => setNewBlockedReason(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 p-2 text-xs text-white"
+              className="w-full rounded-2xl border border-[#DAC7AD] bg-white p-2.5 text-xs text-[#0E1A24]"
             />
             <button
               type="submit"
-              className="w-full rounded-xl bg-electric-teal py-2 text-xs font-semibold text-slate-950 hover:bg-white transition-colors"
+              className="w-full rounded-full bg-[#0E1A24] py-2.5 text-xs font-semibold uppercase tracking-wider text-white hover:bg-[#12B5A6] transition-colors"
             >
-              + Add to Blocked List
+              + Block Date in Database
             </button>
           </form>
 
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {blockedDates.length === 0 ? (
-              <div className="text-slate-500 text-xs italic py-4 text-center">
+              <div className="text-[#0E1A24]/40 text-xs italic py-4 text-center">
                 No dates currently blocked.
               </div>
             ) : (
               blockedDates.map((b) => (
                 <div
                   key={b.date}
-                  className="flex items-center justify-between rounded-xl bg-slate-950 p-3 text-xs border border-slate-800"
+                  className="flex items-center justify-between rounded-2xl bg-[#FAF8F5] p-3 text-xs border border-[#E5E0D5]"
                 >
                   <div>
-                    <span className="font-mono text-electric-teal font-semibold">{b.date}</span>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{b.reason}</p>
+                    <span className="font-mono font-bold text-[#0E1A24]">{b.date}</span>
+                    <p className="text-[11px] text-[#0E1A24]/60 mt-0.5">{b.reason}</p>
                   </div>
                   <button
                     onClick={() => handleDeleteBlockedDate(b.date)}
-                    className="p-1 text-slate-400 hover:text-red-400"
+                    className="p-1.5 text-[#0E1A24]/40 hover:text-rose-600 rounded-full hover:bg-rose-50"
                     title="Unblock date"
                   >
                     <Trash2 className="h-4 w-4" />
