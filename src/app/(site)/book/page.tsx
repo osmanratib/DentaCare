@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, Suspense } from 'react'
+import React, { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Calendar,
@@ -16,12 +16,18 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { Reveal } from '@/components/motion/Reveal'
-import { CLINIC_SERVICES, CLINIC_TEAM } from '@/lib/data/mockData'
+import { CLINIC_SERVICES as DEFAULT_SERVICES, CLINIC_TEAM as DEFAULT_TEAM } from '@/lib/data/mockData'
 import { requestAppointment } from '@/actions/booking'
+import { createClient } from '@/lib/supabase/client'
 
 function BookingForm() {
   const searchParams = useSearchParams()
-  const initialService = searchParams.get('service') || CLINIC_SERVICES[0].id
+  const supabase = createClient()
+
+  const [services, setServices] = useState(DEFAULT_SERVICES)
+  const [doctors, setDoctors] = useState(DEFAULT_TEAM)
+
+  const initialService = searchParams.get('service') || DEFAULT_SERVICES[0].id
 
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
@@ -31,7 +37,7 @@ function BookingForm() {
   // Form State
   const [formData, setFormData] = useState({
     serviceId: initialService,
-    doctorId: CLINIC_TEAM[0].name,
+    doctorId: DEFAULT_TEAM[0].name,
     date: '2026-10-30',
     timeSlot: '10:00 AM - 11:00 AM',
     name: '',
@@ -40,6 +46,53 @@ function BookingForm() {
     message: '',
     websiteUrl: '', // Honeypot
   })
+
+  useEffect(() => {
+    // Fetch live services from Supabase
+    supabase.from('services').select('*').eq('published', true).order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            slug: d.slug,
+            title: d.title,
+            subtitle: d.body?.subtitle || 'Clinical Treatment',
+            summary: d.summary || '',
+            description: d.summary || '',
+            priceFrom: d.price_from || 0,
+            durationMin: d.duration_min || 45,
+            imagePath: d.image_path || '',
+            features: d.body?.features || ['Clinical consultation', '10-year warranty'],
+            published: d.published,
+            sortOrder: d.sort_order || 0,
+          }))
+          setServices(mapped)
+          if (!formData.serviceId) {
+            setFormData((prev) => ({ ...prev, serviceId: mapped[0].id }))
+          }
+        }
+      })
+
+    // Fetch live team from Supabase
+    supabase.from('team_members').select('*').eq('published', true).order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const mappedDocs = data.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            title: d.title || 'Specialist',
+            role: d.title || 'Doctor',
+            bio: d.bio || '',
+            education: '',
+            photoPath: d.photo_path || '',
+            specialties: ['Cosmetic', 'Restorative'],
+            published: d.published,
+            sortOrder: d.sort_order || 0,
+          }))
+          setDoctors(mappedDocs)
+        }
+      })
+  }, [supabase])
 
   const availableSlots = [
     '09:00 AM - 10:00 AM',
@@ -50,8 +103,9 @@ function BookingForm() {
   ]
 
   const selectedServiceObj =
-    CLINIC_SERVICES.find((s) => s.id === formData.serviceId || s.slug === formData.serviceId) ||
-    CLINIC_SERVICES[0]
+    services.find((s) => s.id === formData.serviceId || s.slug === formData.serviceId) ||
+    services[0] ||
+    DEFAULT_SERVICES[0]
 
   const handleNext = () => {
     setErrorMessage(null)
@@ -162,7 +216,7 @@ function BookingForm() {
               </p>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {CLINIC_SERVICES.map((s) => (
+                {services.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -191,7 +245,7 @@ function BookingForm() {
                   Preferred Specialist (Optional)
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {CLINIC_TEAM.map((doc) => (
+                  {doctors.map((doc) => (
                     <button
                       key={doc.id}
                       type="button"
