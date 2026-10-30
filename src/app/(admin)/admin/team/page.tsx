@@ -13,8 +13,11 @@ import {
   User,
   GraduationCap,
   Sparkles,
+  Upload,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
+import PhotoUpload from '@/components/admin/PhotoUpload'
 
 interface Doctor {
   id: string
@@ -32,7 +35,6 @@ export default function AdminTeamPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -52,6 +54,7 @@ export default function AdminTeamPage() {
 
     if (error) {
       console.error('Error fetching doctors:', error)
+      toastError('Fetch Failed', error.message)
     } else if (data) {
       setDoctors(data)
     }
@@ -89,16 +92,19 @@ export default function AdminTeamPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove ${name} from the clinical faculty?`)) return
+    const isConfirmed = await confirmDelete(
+      name,
+      'This specialist profile will be unlinked from booking slots and permanently removed from the website.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('team_members').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Failed to delete doctor: ${error.message}`, type: 'error' })
+      toastError('Delete Failed', error.message)
     } else {
-      setMessage({ text: `${name} has been removed from the database.`, type: 'success' })
+      toastSuccess('Faculty Removed', `${name} has been removed from the directory.`)
       setDoctors((prev) => prev.filter((d) => d.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,9 +124,9 @@ export default function AdminTeamPage() {
         .eq('id', editingDoctor.id)
 
       if (error) {
-        setMessage({ text: `Update error: ${error.message}`, type: 'error' })
+        toastError('Update Error', error.message)
       } else {
-        setMessage({ text: 'Doctor profile updated in Supabase database.', type: 'success' })
+        toastSuccess('Doctor Profile Updated', `${formData.name} was successfully updated.`)
         setModalOpen(false)
         fetchDoctors()
       }
@@ -137,14 +143,13 @@ export default function AdminTeamPage() {
       ])
 
       if (error) {
-        setMessage({ text: `Creation error: ${error.message}`, type: 'error' })
+        toastError('Registration Error', error.message)
       } else {
-        setMessage({ text: 'New doctor registered in Supabase database.', type: 'success' })
+        toastSuccess('Specialist Registered', `${formData.name} added to the clinical faculty.`)
         setModalOpen(false)
         fetchDoctors()
       }
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   return (
@@ -159,7 +164,7 @@ export default function AdminTeamPage() {
             Specialists & Master Ceramists
           </h1>
           <p className="mt-1 text-xs text-[#0E1A24]/60">
-            Curate the attending physicians displayed on the public clinic website and booking wizards.
+            Import portraits directly from your computer, assign clinical titles, and curate the attending faculty.
           </p>
         </div>
 
@@ -171,23 +176,6 @@ export default function AdminTeamPage() {
           <span>Add Specialist</span>
         </button>
       </div>
-
-      {message && (
-        <div
-          className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
-            message.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border border-rose-200'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       {loading ? (
         <div className="py-16 text-center text-xs text-[#0E1A24]/50">
@@ -212,6 +200,7 @@ export default function AdminTeamPage() {
                       src={doc.photo_path}
                       alt={doc.name}
                       fill
+                      unoptimized={doc.photo_path.includes('supabase.co') || doc.photo_path.startsWith('data:')}
                       className="object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   ) : (
@@ -273,15 +262,23 @@ export default function AdminTeamPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E1A24]/60 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-[#F0ECE1]">
-              <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
-                {editingDoctor ? 'Update Specialist Dossier' : 'Register Specialist to Faculty'}
-              </h2>
-              <button onClick={() => setModalOpen(false)} className="text-[#0E1A24]/50 hover:text-[#0E1A24]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12B5A6]">
+                  Faculty Management
+                </span>
+                <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
+                  {editingDoctor ? 'Update Specialist Dossier' : 'Register Specialist to Faculty'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-[#0E1A24]/50 hover:text-[#0E1A24] rounded-full p-1.5 hover:bg-[#FAF8F5]"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5 text-xs">
               <div>
                 <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
                   Full Name & Diplomas *
@@ -310,24 +307,22 @@ export default function AdminTeamPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
-                  Photo URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.photo_path}
-                  onChange={(e) => setFormData({ ...formData, photo_path: e.target.value })}
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
-                />
-              </div>
+              {/* Photo Upload with direct Computer Import */}
+              <PhotoUpload
+                value={formData.photo_path}
+                onChange={(url) => setFormData({ ...formData, photo_path: url })}
+                label="Portrait Photo (Import from Computer)"
+                folder="doctors"
+                aspectRatio="portrait"
+                helperText="Upload a crisp portrait photo directly from your PC. It will be stored in high resolution."
+              />
 
               <div>
                 <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
                   Biography & Credentials
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   placeholder="Fellowships, academic background, philosophy of gentle care..."
@@ -350,7 +345,7 @@ export default function AdminTeamPage() {
                 </div>
 
                 <div className="flex items-center gap-2 text-xs">
-                  <span>Sort Order:</span>
+                  <span className="text-[#0E1A24]/70">Sort Order:</span>
                   <input
                     type="number"
                     value={formData.sort_order}
@@ -372,7 +367,7 @@ export default function AdminTeamPage() {
                   type="submit"
                   className="rounded-full bg-[#0E1A24] px-6 py-2.5 font-semibold text-white hover:bg-[#12B5A6] transition-colors shadow-sm"
                 >
-                  Save to Database
+                  Save Specialist
                 </button>
               </div>
             </form>

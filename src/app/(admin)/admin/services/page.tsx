@@ -7,13 +7,13 @@ import {
   Plus,
   Trash2,
   Edit2,
-  CheckCircle2,
-  AlertCircle,
   X,
   Clock,
   Sparkles,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
+import PhotoUpload from '@/components/admin/PhotoUpload'
 
 interface Service {
   id: string
@@ -33,7 +33,6 @@ export default function AdminServicesPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -55,6 +54,7 @@ export default function AdminServicesPage() {
 
     if (error) {
       console.error('Error fetching services:', error)
+      toastError('Fetch Error', error.message)
     } else if (data) {
       setServices(data)
     }
@@ -96,16 +96,19 @@ export default function AdminServicesPage() {
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete procedure "${title}" from catalog?`)) return
+    const isConfirmed = await confirmDelete(
+      `Procedure "${title}"`,
+      'This procedure will be unlisted from booking and removed from the catalog.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('services').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Delete error: ${error.message}`, type: 'error' })
+      toastError('Delete Error', error.message)
     } else {
-      setMessage({ text: `"${title}" removed from database.`, type: 'success' })
+      toastSuccess('Procedure Deleted', `"${title}" removed from catalog.`)
       setServices((prev) => prev.filter((s) => s.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,9 +134,9 @@ export default function AdminServicesPage() {
         .eq('id', editingService.id)
 
       if (error) {
-        setMessage({ text: `Update error: ${error.message}`, type: 'error' })
+        toastError('Update Error', error.message)
       } else {
-        setMessage({ text: 'Treatment procedure updated.', type: 'success' })
+        toastSuccess('Procedure Updated', `${formData.title} has been updated.`)
         setModalOpen(false)
         fetchServices()
       }
@@ -152,14 +155,13 @@ export default function AdminServicesPage() {
       ])
 
       if (error) {
-        setMessage({ text: `Creation error: ${error.message}`, type: 'error' })
+        toastError('Creation Error', error.message)
       } else {
-        setMessage({ text: 'New procedure cataloged in database.', type: 'success' })
+        toastSuccess('Procedure Created', `${formData.title} cataloged in database.`)
         setModalOpen(false)
         fetchServices()
       }
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   return (
@@ -174,7 +176,7 @@ export default function AdminServicesPage() {
             Procedures & Ceremonies
           </h1>
           <p className="mt-1 text-xs text-[#0E1A24]/60">
-            Configure clinical offerings, baseline pricing, chair times, and patient protocols.
+            Import treatment photos from your computer, configure clinical pricing, chair times, and patient protocols.
           </p>
         </div>
 
@@ -187,96 +189,83 @@ export default function AdminServicesPage() {
         </button>
       </div>
 
-      {message && (
-        <div
-          className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
-            message.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border border-rose-200'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
-
       {loading ? (
         <div className="py-16 text-center text-xs text-[#0E1A24]/50">
-          Loading treatment repertoire...
+          Loading clinical repertoire...
         </div>
       ) : services.length === 0 ? (
         <div className="rounded-4xl border border-[#E5E0D5] bg-white p-12 text-center text-xs text-[#0E1A24]/50">
-          No procedures registered yet. Click &ldquo;Add Procedure&rdquo; above.
+          No procedures cataloged yet.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-          {services.map((svc) => (
+          {services.map((s) => (
             <div
-              key={svc.id}
-              className="group rounded-4xl border border-[#E5E0D5] bg-white p-6 shadow-[0_4px_24px_rgba(14,26,36,0.02)] transition-all hover:border-[#DAC7AD] hover:shadow-[0_8px_32px_rgba(14,26,36,0.06)] flex flex-col justify-between"
+              key={s.id}
+              className="rounded-4xl border border-[#E5E0D5] bg-white p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] hover:border-[#DAC7AD] hover:shadow-[0_8px_32px_rgba(14,26,36,0.06)] transition-all flex flex-col justify-between"
             >
               <div>
-                <div className="relative h-44 w-full rounded-3xl overflow-hidden bg-[#E8DCC8] mb-5 border border-[#DAC7AD]/40">
-                  {svc.image_path && (
+                <div className="relative h-44 w-full rounded-3xl overflow-hidden bg-[#E8DCC8] mb-4 border border-[#DAC7AD]/40">
+                  {s.image_path ? (
                     <Image
-                      src={svc.image_path}
-                      alt={svc.title}
+                      src={s.image_path}
+                      alt={s.title}
                       fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      unoptimized={s.image_path.includes('supabase.co') || s.image_path.startsWith('data:')}
+                      className="object-cover"
                     />
+                  ) : (
+                    <div className="flex h-full items-center justify-center">
+                      <Briefcase className="h-8 w-8 text-[#0E1A24]/30" />
+                    </div>
                   )}
-                  <div className="absolute top-3 right-3 rounded-full bg-[#0E1A24]/85 px-3 py-1 text-xs font-serif font-bold text-white backdrop-blur-md">
-                    From ${svc.price_from}
+
+                  <div className="absolute top-3 right-3 rounded-full bg-[#0E1A24]/80 px-2.5 py-0.5 text-[10px] font-semibold text-white">
+                    Sort #{s.sort_order}
+                  </div>
+
+                  <div className="absolute bottom-3 left-3">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur-md ${
+                        s.published
+                          ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-[#0E1A24]/80 text-[#FAF8F5]/60'
+                      }`}
+                    >
+                      {s.published ? 'Live Catalog' : 'Draft'}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-start justify-between">
-                  <h3 className="font-serif text-xl font-bold text-[#0E1A24]">
-                    {svc.title}
-                  </h3>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                      svc.published
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-[#EFECE3] text-[#0E1A24]/60'
-                    }`}
-                  >
-                    {svc.published ? 'Live' : 'Hidden'}
+                <div className="flex items-center justify-between text-xs text-[#0E1A24]/60 mb-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-[#12B5A6]" />
+                    {s.duration_min} mins
+                  </span>
+                  <span className="font-serif font-bold text-[#0E1A24]">
+                    from ${s.price_from}
                   </span>
                 </div>
 
-                <div className="font-mono text-[11px] text-[#12B5A6] mt-0.5">
-                  /services/{svc.slug}
-                </div>
-
-                <p className="mt-3 text-xs text-[#0E1A24]/70 leading-relaxed font-light line-clamp-3">
-                  {svc.summary || 'Custom clinical protocol.'}
+                <h3 className="font-serif text-xl font-bold text-[#0E1A24]">{s.title}</h3>
+                <p className="mt-2 text-xs text-[#0E1A24]/70 line-clamp-3 font-light leading-relaxed">
+                  {s.summary || 'Custom biological protocol tailored to patient physiology.'}
                 </p>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-[#F0ECE1] pt-4 text-xs">
-                <span className="flex items-center gap-1.5 font-medium text-[#0E1A24]/60">
-                  <Clock className="h-3.5 w-3.5 text-[#12B5A6]" />
-                  <span>{svc.duration_min} mins chair</span>
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleOpenEdit(svc)}
-                    className="rounded-full border border-[#DAC7AD] bg-[#FAF8F5] px-3.5 py-1.5 font-semibold text-[#0E1A24] hover:bg-[#0E1A24] hover:text-white transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(svc.id, svc.title)}
-                    className="rounded-full border border-rose-200 px-3 py-1.5 text-rose-600 hover:bg-rose-50"
-                  >
-                    Delete
-                  </button>
-                </div>
+              <div className="mt-6 flex items-center justify-end gap-2 pt-4 border-t border-[#F0ECE1]">
+                <button
+                  onClick={() => handleOpenEdit(s)}
+                  className="rounded-full border border-[#DAC7AD] bg-[#FAF8F5] px-3.5 py-1 text-xs font-semibold text-[#0E1A24] hover:bg-[#0E1A24] hover:text-white transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(s.id, s.title)}
+                  className="rounded-full border border-rose-200 px-3 py-1 text-xs text-rose-600 hover:bg-rose-50 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
@@ -286,17 +275,25 @@ export default function AdminServicesPage() {
       {/* MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E1A24]/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-[#F0ECE1]">
-              <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
-                {editingService ? 'Edit Procedure' : 'Add Treatment Discipline'}
-              </h2>
-              <button onClick={() => setModalOpen(false)} className="text-[#0E1A24]/50 hover:text-[#0E1A24]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12B5A6]">
+                  Repertoire Catalog
+                </span>
+                <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
+                  {editingService ? 'Update Treatment Protocol' : 'Catalog New Treatment'}
+                </h2>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-[#0E1A24]/50 hover:text-[#0E1A24] rounded-full p-1.5 hover:bg-[#FAF8F5]"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="mt-6 space-y-5 text-xs">
               <div>
                 <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
                   Procedure Title *
@@ -321,7 +318,7 @@ export default function AdminServicesPage() {
                     required
                     value={formData.price_from}
                     onChange={(e) => setFormData({ ...formData, price_from: Number(e.target.value) })}
-                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                   />
                 </div>
                 <div>
@@ -332,22 +329,20 @@ export default function AdminServicesPage() {
                     type="number"
                     value={formData.duration_min}
                     onChange={(e) => setFormData({ ...formData, duration_min: Number(e.target.value) })}
-                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
+                    className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
-                  Cover Image URL
-                </label>
-                <input
-                  type="url"
-                  value={formData.image_path}
-                  onChange={(e) => setFormData({ ...formData, image_path: e.target.value })}
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
-                />
-              </div>
+              {/* Photo Upload with direct Computer Import */}
+              <PhotoUpload
+                value={formData.image_path}
+                onChange={(url) => setFormData({ ...formData, image_path: url })}
+                label="Procedure Cover Photo (Import from Computer)"
+                folder="services"
+                aspectRatio="wide"
+                helperText="Upload a clinical treatment photo directly from your PC."
+              />
 
               <div>
                 <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
@@ -358,7 +353,7 @@ export default function AdminServicesPage() {
                   value={formData.summary}
                   onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
                   placeholder="Handcrafted micro-layering details..."
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
@@ -377,7 +372,7 @@ export default function AdminServicesPage() {
                 </div>
 
                 <div className="flex items-center gap-2 text-xs">
-                  <span>Sort Order:</span>
+                  <span className="text-[#0E1A24]/70">Sort Order:</span>
                   <input
                     type="number"
                     value={formData.sort_order}

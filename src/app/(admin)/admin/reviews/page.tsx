@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Star, CheckCircle2, AlertCircle, Trash2, Eye, EyeOff, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
 
 interface Review {
   id: string
@@ -53,30 +54,32 @@ export default function ReviewsAdminPage() {
       .eq('id', id)
 
     if (error) {
-      setMessage({ text: `Update error: ${error.message}`, type: 'error' })
+      toastError('Update Error', error.message)
     } else {
       setReviews((prev) =>
         prev.map((r) => (r.id === id ? { ...r, published: !currentPublished } : r))
       )
-      setMessage({
-        text: `Review ${!currentPublished ? 'approved and live' : 'hidden from public view'}.`,
-        type: 'success',
-      })
+      toastSuccess(
+        !currentPublished ? 'Testimonial Approved' : 'Testimonial Hidden',
+        `Review ${!currentPublished ? 'is now live on the public website' : 'is hidden from public view'}.`
+      )
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleDelete = async (id: string, author: string) => {
-    if (!confirm(`Delete review from "${author}"?`)) return
+    const isConfirmed = await confirmDelete(
+      `Review by "${author}"`,
+      'This testimonial will be permanently purged from the database.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('reviews').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Delete error: ${error.message}`, type: 'error' })
+      toastError('Delete Error', error.message)
     } else {
-      setMessage({ text: `Review by "${author}" removed.`, type: 'success' })
+      toastSuccess('Review Deleted', `Testimonial by "${author}" removed.`)
       setReviews((prev) => prev.filter((r) => r.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -85,9 +88,9 @@ export default function ReviewsAdminPage() {
     const { error } = await supabase.from('reviews').insert([formData])
 
     if (error) {
-      setMessage({ text: `Creation error: ${error.message}`, type: 'error' })
+      toastError('Submission Error', error.message)
     } else {
-      setMessage({ text: 'Patient testimonial saved into Supabase.', type: 'success' })
+      toastSuccess('Testimonial Added', 'Patient endorsement saved into database.')
       setModalOpen(false)
       fetchReviews()
       setFormData({
@@ -97,7 +100,6 @@ export default function ReviewsAdminPage() {
         published: true,
       })
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   return (

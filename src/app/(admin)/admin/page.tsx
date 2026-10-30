@@ -20,8 +20,14 @@ import {
   ChevronRight,
   HeartHandshake,
   Check,
+  Upload,
+  Copy,
+  ExternalLink,
+  ImageIcon,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError, alertSuccess } from '@/lib/sweetalert'
+import PhotoUpload from '@/components/admin/PhotoUpload'
 
 export default function AdminDashboardPage() {
   const supabase = createClient()
@@ -34,6 +40,10 @@ export default function AdminDashboardPage() {
     patientsCount: 0,
     servicesCount: 0,
   })
+
+  // Quick Photo Importer State
+  const [dashboardPhoto, setDashboardPhoto] = useState('')
+  const [recentUploads, setRecentUploads] = useState<string[]>([])
 
   const loadDashboardData = async () => {
     setLoading(true)
@@ -89,11 +99,45 @@ export default function AdminDashboardPage() {
   }, [])
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
-    await supabase.from('appointments').update({ status: newStatus }).eq('id', id)
-    setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
-    )
-    loadDashboardData()
+    if (newStatus === 'cancelled') {
+      const isConfirmed = await confirmDelete(
+        'this appointment',
+        'The reserved operatory slot will be released.'
+      )
+      if (!isConfirmed) return
+    }
+
+    const { error } = await supabase.from('appointments').update({ status: newStatus }).eq('id', id)
+    if (error) {
+      toastError('Update Failed', error.message)
+    } else {
+      toastSuccess(
+        newStatus === 'confirmed' ? 'Visit Confirmed' : `Appointment ${newStatus}`,
+        `Status set to ${newStatus}.`
+      )
+      setAppointments((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
+      )
+      loadDashboardData()
+    }
+  }
+
+  const handlePhotoImported = (url: string) => {
+    setDashboardPhoto(url)
+    if (url && !recentUploads.includes(url)) {
+      setRecentUploads((prev) => [url, ...prev].slice(0, 6))
+    }
+    if (url && typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url)
+      toastSuccess('Photo Stored & URL Copied', 'Direct link copied to your clipboard.')
+    }
+  }
+
+  const handleCopyUrl = (url: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url)
+      toastSuccess('URL Copied', 'Photo URL copied to clipboard.')
+    }
   }
 
   const filtered = appointments.filter((a) => {
@@ -119,7 +163,7 @@ export default function AdminDashboardPage() {
 
           <p className="mt-3 text-xs sm:text-sm text-[#0E1A24]/70 leading-relaxed font-light">
             You have <strong className="text-[#0E1A24] font-medium">{stats.confirmed} scheduled visits</strong> and{' '}
-            <strong className="text-[#12B5A6] font-medium">{stats.pending} patient requests</strong> awaiting clinical triage. The sterilization autoclaves are verified and operatories are ready.
+            <strong className="text-[#12B5A6] font-medium">{stats.pending} patient requests</strong> awaiting clinical triage. Autoclaves verified and operatories prepped.
           </p>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -180,173 +224,215 @@ export default function AdminDashboardPage() {
         <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[#0E1A24]/60">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">Active Patient Registry</span>
-              <Users className="h-4 w-4 text-sky-600" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Active Patient Files</span>
+              <Users className="h-4 w-4 text-[#12B5A6]" />
             </div>
             <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
               {stats.patientsCount}
             </div>
           </div>
-          <div className="mt-3 text-[11px] text-sky-800 font-medium bg-sky-50 rounded-xl px-2.5 py-1 w-fit">
-            Registered charts
+          <div className="mt-3 text-[11px] text-[#0E1A24]/60 font-medium bg-[#FAF8F5] border border-[#E5E0D5] rounded-xl px-2.5 py-1 w-fit">
+            Synchronized with Supabase
           </div>
         </div>
 
         <div className="rounded-3xl border border-[#E5E0D5] bg-white p-5 sm:p-6 shadow-[0_2px_16px_rgba(14,26,36,0.02)] flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-[#0E1A24]/60">
-              <span className="text-[11px] font-semibold uppercase tracking-wider">Laboratory Artistry</span>
-              <HeartHandshake className="h-4 w-4 text-[#12B5A6]" />
+              <span className="text-[11px] font-semibold uppercase tracking-wider">Cataloged Procedures</span>
+              <Briefcase className="h-4 w-4 text-[#12B5A6]" />
             </div>
             <div className="mt-3 font-serif text-3xl sm:text-4xl font-bold text-[#0E1A24]">
-              4.98<span className="text-xl text-[#12B5A6]">★</span>
+              {stats.servicesCount}
             </div>
           </div>
-          <div className="mt-3 text-[11px] text-[#0E1A24]/70 font-medium bg-[#EFECE3] rounded-xl px-2.5 py-1 w-fit">
-            Patient satisfaction index
+          <div className="mt-3 text-[11px] text-[#0E1A24]/60 font-medium bg-[#FAF8F5] border border-[#E5E0D5] rounded-xl px-2.5 py-1 w-fit">
+            Custom protocol menu
           </div>
         </div>
       </div>
 
       {/* ===================================================================
-          3. HUMAN QUICK CLINICAL SHORTCUTS
+          3. DIRECT PHOTO IMPORTER FROM COMPUTER (Media Assets & Storage)
          =================================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Link
-          href="/admin/team"
-          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
-        >
-          <div className="p-3 rounded-2xl bg-[#CFE8E4]/60 text-[#0E1A24] group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
-            <Stethoscope className="h-5 w-5" />
-          </div>
+      <div className="rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-[0_2px_20px_rgba(14,26,36,0.02)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE1] pb-5">
           <div>
-            <div className="text-xs font-bold text-[#0E1A24]">Doctors Roster</div>
-            <div className="text-[11px] text-[#0E1A24]/60">Add & Edit Faculty</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/services"
-          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
-        >
-          <div className="p-3 rounded-2xl bg-[#E8DCC8]/60 text-[#0E1A24] group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
-            <Briefcase className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-[#0E1A24]">Procedures Menu</div>
-            <div className="text-[11px] text-[#0E1A24]/60">Pricing & Protocols</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/patients"
-          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
-        >
-          <div className="p-3 rounded-2xl bg-sky-100 text-sky-900 group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
-            <Users className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-[#0E1A24]">Patient Files</div>
-            <div className="text-[11px] text-[#0E1A24]/60">Notes & History</div>
-          </div>
-        </Link>
-
-        <Link
-          href="/admin/availability"
-          className="group rounded-3xl border border-[#E5E0D5] bg-white p-4 sm:p-5 hover:border-[#12B5A6] hover:shadow-sm transition-all flex items-center gap-3.5"
-        >
-          <div className="p-3 rounded-2xl bg-amber-100 text-amber-900 group-hover:bg-[#12B5A6] group-hover:text-white transition-colors">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-[#0E1A24]">Operating Slots</div>
-            <div className="text-[11px] text-[#0E1A24]/60">Hours & Holidays</div>
-          </div>
-        </Link>
-      </div>
-
-      {/* ===================================================================
-          4. PATIENT APPOINTMENT QUEUE (Warm Medical Chart Cards)
-         =================================================================== */}
-      <div className="rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-[0_4px_30px_rgba(14,26,36,0.02)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE1] pb-6">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[#12B5A6]">
-              Patient Pipeline
+            <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#12B5A6]">
+              <Upload className="h-3.5 w-3.5" />
+              <span>Clinic Media Center</span>
             </div>
             <h2 className="mt-1 font-serif text-2xl font-medium text-[#0E1A24]">
-              Recent Consultations & Requests
+              Import Photos from Your Computer
             </h2>
+            <p className="mt-1 text-xs text-[#0E1A24]/60">
+              Import doctor portraits, before & after clinical photography, or treatment images directly from your PC into Supabase Storage.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                filter === 'all'
-                  ? 'bg-[#0E1A24] text-white'
-                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
-              }`}
+            <Link
+              href="/admin/gallery"
+              className="rounded-full border border-[#DAC7AD] bg-[#FAF8F5] px-4 py-2 text-xs font-semibold text-[#0E1A24] hover:bg-[#0E1A24] hover:text-white transition-colors"
             >
-              All ({appointments.length})
-            </button>
-            <button
-              onClick={() => setFilter('pending')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                filter === 'pending'
-                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
-              }`}
+              Go to Smile Gallery
+            </Link>
+            <Link
+              href="/admin/team"
+              className="rounded-full bg-[#0E1A24] px-4 py-2 text-xs font-semibold text-white hover:bg-[#12B5A6] transition-colors shadow-sm"
             >
-              Pending ({stats.pending})
-            </button>
-            <button
-              onClick={() => setFilter('confirmed')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                filter === 'confirmed'
-                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
-                  : 'bg-[#EFECE3] text-[#0E1A24]/70 hover:text-[#0E1A24]'
-              }`}
-            >
-              Confirmed ({stats.confirmed})
-            </button>
+              Go to Faculty
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <div>
+            <PhotoUpload
+              value={dashboardPhoto}
+              onChange={handlePhotoImported}
+              label="Select or Drag Image File from Computer"
+              aspectRatio="wide"
+              folder="general"
+              helperText="Upload any JPEG, PNG, or WEBP photo from your computer. Once imported, its permanent link is auto-copied."
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="rounded-3xl border border-[#E5E0D5] bg-[#FAF8F5] p-5">
+              <h3 className="font-serif text-base font-semibold text-[#0E1A24]">
+                Where are imported photos used?
+              </h3>
+              <ul className="mt-3 space-y-2.5 text-xs text-[#0E1A24]/75">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#12B5A6] shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Specialists & Faculty:</strong> Import doctor portraits in{' '}
+                    <Link href="/admin/team" className="text-[#12B5A6] underline font-medium">
+                      Faculty Directory
+                    </Link>
+                    .
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#12B5A6] shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Smile Transformation:</strong> Upload Baseline (Before) and Revealed (After) pairs in{' '}
+                    <Link href="/admin/gallery" className="text-[#12B5A6] underline font-medium">
+                      Aesthetic Gallery
+                    </Link>
+                    .
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#12B5A6] shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Procedures:</strong> Upload treatment cards in{' '}
+                    <Link href="/admin/services" className="text-[#12B5A6] underline font-medium">
+                      Procedures Repertoire
+                    </Link>
+                    .
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {recentUploads.length > 0 && (
+              <div className="rounded-3xl border border-[#E5E0D5] bg-white p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-[#0E1A24]/60 mb-2.5">
+                  Recently Imported Session Photos
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {recentUploads.map((url, idx) => (
+                    <div
+                      key={idx}
+                      className="group relative h-20 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="Uploaded" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleCopyUrl(url)}
+                        title="Copy Link"
+                        className="absolute inset-0 bg-[#0E1A24]/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity text-[10px] font-semibold gap-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span>Copy</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===================================================================
+          4. INCOMING CLINICAL CONSULTATION REQUESTS (Physical Chart Cards)
+         =================================================================== */}
+      <div className="rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-[0_2px_20px_rgba(14,26,36,0.02)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F0ECE1] pb-5">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-[#12B5A6]">
+              Clinical Queue
+            </div>
+            <h2 className="mt-1 font-serif text-2xl font-medium text-[#0E1A24]">
+              Recent Consultation Inquiries
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-[#DAC7AD] bg-[#FAF8F5] p-1 text-xs">
+            {(['all', 'pending', 'confirmed'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setFilter(mode)}
+                className={`rounded-full px-3.5 py-1 text-xs font-medium capitalize transition-colors ${
+                  filter === mode
+                    ? 'bg-[#0E1A24] text-white shadow-xs'
+                    : 'text-[#0E1A24]/70 hover:text-[#0E1A24]'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
           </div>
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-xs text-[#0E1A24]/50">
-            Consulting Supabase database...
+          <div className="py-16 text-center text-xs text-[#0E1A24]/50">
+            Synchronizing clinical appointment files...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-12 text-center text-xs text-[#0E1A24]/50">
-            No consultations matching this category.
+          <div className="py-16 text-center text-xs text-[#0E1A24]/50">
+            No inquiries match the active filter.
           </div>
         ) : (
           <div className="mt-6 space-y-4">
             {filtered.map((apt) => (
               <div
                 key={apt.id}
-                className="group rounded-3xl border border-[#E5E0D5] bg-[#FAF8F5] p-5 sm:p-6 transition-all hover:bg-white hover:border-[#DAC7AD] hover:shadow-[0_4px_20px_rgba(14,26,36,0.04)]"
+                className="group rounded-3xl border border-[#DAC7AD] bg-[#FAF8F5] p-5 transition-all hover:border-[#12B5A6] hover:shadow-[0_4px_20px_rgba(14,26,36,0.04)]"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  {/* Left: Patient Identity */}
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8DCC8] font-serif text-lg font-bold text-[#0E1A24] shrink-0 border border-[#DAC7AD]">
-                      {apt.patient?.full_name ? apt.patient.full_name.slice(0, 2).toUpperCase() : 'PT'}
+                  {/* Left: Patient ID & Chart Label */}
+                  <div className="flex items-start gap-3.5">
+                    <div className="h-10 w-10 shrink-0 rounded-2xl bg-[#E8DCC8] flex items-center justify-center text-[#0E1A24] font-serif font-bold text-base border border-[#DAC7AD]">
+                      {apt.patient?.full_name ? apt.patient.full_name[0] : 'P'}
                     </div>
 
                     <div>
-                      <div className="flex items-center gap-2.5">
-                        <h3 className="font-serif text-lg font-bold text-[#0E1A24]">
-                          {apt.patient?.full_name || 'Patient Chart'}
-                        </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="font-serif text-lg font-bold text-[#0E1A24]">
+                          {apt.patient?.full_name || 'Anonymous Visitor'}
+                        </span>
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                             apt.status === 'confirmed'
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                               : apt.status === 'pending'
-                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                              : 'bg-[#EFECE3] text-[#0E1A24]/70'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : 'bg-[#E5E0D5] text-[#0E1A24]/60'
                           }`}
                         >
                           {apt.status}

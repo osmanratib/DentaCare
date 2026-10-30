@@ -13,6 +13,7 @@ import {
   History,
   Sparkles,
 } from 'lucide-react'
+import { toastSuccess } from '@/lib/sweetalert'
 
 export default function SettingsAdminPage() {
   const [inviteEmail, setInviteEmail] = useState('')
@@ -53,6 +54,7 @@ export default function SettingsAdminPage() {
     e.preventDefault()
     if (!inviteEmail) return
     setInviteSent(true)
+    toastSuccess('Invitation Dispatched', `Administrative invite sent to ${inviteEmail} with ${inviteRole} privileges.`)
     setTimeout(() => {
       setInviteEmail('')
       setInviteSent(false)

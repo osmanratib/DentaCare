@@ -24,6 +24,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmAction, toastSuccess } from '@/lib/sweetalert'
 
 export default function AdminLayout({
   children,
@@ -61,7 +62,16 @@ export default function AdminLayout({
   ]
 
   const handleLogout = async () => {
+    const isConfirmed = await confirmAction({
+      title: 'Sign Out of Staff Session?',
+      text: 'You will need your administrative credentials to log back in.',
+      confirmButtonText: 'Yes, Sign Out',
+      cancelButtonText: 'Stay Signed In',
+    })
+    if (!isConfirmed) return
+
     await supabase.auth.signOut()
+    toastSuccess('Signed Out', 'You have been safely signed out.')
     router.push('/admin/login')
     router.refresh()
   }

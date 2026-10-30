@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
 
 interface AppointmentRecord {
   id: string
@@ -102,27 +103,29 @@ export default function AppointmentsAdminPage() {
       .eq('id', id)
 
     if (error) {
-      setMessage({ text: `Failed to update status: ${error.message}`, type: 'error' })
+      toastError('Update Failed', error.message)
     } else {
-      setMessage({ text: `Appointment marked as ${newStatus}.`, type: 'success' })
+      toastSuccess('Status Updated', `Appointment marked as ${newStatus}.`)
       setAppointments((prev) =>
         prev.map((a) => (a.id === id ? { ...a, status: newStatus } : a))
       )
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel and remove this appointment?')) return
+    const isConfirmed = await confirmDelete(
+      'this appointment',
+      'This clinical booking will be cancelled and permanently purged from the appointment ledger.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('appointments').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Failed to delete: ${error.message}`, type: 'error' })
+      toastError('Cancellation Failed', error.message)
     } else {
-      setMessage({ text: 'Appointment removed from schedule.', type: 'success' })
+      toastSuccess('Appointment Cancelled', 'Appointment removed from schedule.')
       setAppointments((prev) => prev.filter((a) => a.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
@@ -142,7 +145,7 @@ export default function AppointmentsAdminPage() {
       .single()
 
     if (pError || !patient) {
-      setMessage({ text: `Patient error: ${pError?.message || 'Could not save patient'}`, type: 'error' })
+      toastError('Patient Error', pError?.message || 'Could not save patient')
       return
     }
 
@@ -158,9 +161,9 @@ export default function AppointmentsAdminPage() {
     ])
 
     if (aError) {
-      setMessage({ text: `Appointment creation error: ${aError.message}`, type: 'error' })
+      toastError('Booking Error', aError.message)
     } else {
-      setMessage({ text: 'New appointment booked and saved into database.', type: 'success' })
+      toastSuccess('Appointment Scheduled', 'Booking saved into database with confirmed status.')
       setModalOpen(false)
       fetchAppointments()
       setNewPatientName('')
@@ -168,7 +171,6 @@ export default function AppointmentsAdminPage() {
       setNewPatientEmail('')
       setNewNotes('')
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   const exportCSV = () => {
@@ -189,6 +191,7 @@ export default function AppointmentsAdminPage() {
     link.href = url
     link.download = `dentacare-appointments-${new Date().toISOString().split('T')[0]}.csv`
     link.click()
+    toastSuccess('CSV Exported', 'Appointment ledger downloaded successfully.')
   }
 
   const filtered = appointments.filter((apt) => {

@@ -48,6 +48,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "player.vimeo.com",
       },
+      {
+        protocol: "https",
+        hostname: "qknsobdwmngzyriptptd.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+      },
     ],
   },
   async headers() {

@@ -12,6 +12,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
 
 interface BlockedDate {
   date: string
@@ -89,12 +90,11 @@ export default function AvailabilityAdminPage() {
     const { error } = await supabase.from('availability_rules').insert(activeRules)
 
     if (error) {
-      setMessage({ text: `Failed to save: ${error.message}`, type: 'error' })
+      toastError('Save Error', error.message)
     } else {
-      setMessage({ text: 'Weekly operatory hours saved into database.', type: 'success' })
+      toastSuccess('Hours Saved', 'Weekly operatory hours saved into database.')
     }
     setLoading(false)
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleAddBlockedDate = async (e: React.FormEvent) => {
@@ -109,9 +109,9 @@ export default function AvailabilityAdminPage() {
     ])
 
     if (error) {
-      setMessage({ text: `Error blocking date: ${error.message}`, type: 'error' })
+      toastError('Error Blocking Date', error.message)
     } else {
-      setMessage({ text: `Date ${newBlockedDate} added to blocked schedule.`, type: 'success' })
+      toastSuccess('Date Blocked', `Date ${newBlockedDate} added to blocked schedule.`)
       setBlockedDates((prev) => [
         ...prev.filter((b) => b.date !== newBlockedDate),
         { date: newBlockedDate, reason: newBlockedReason || 'Clinic Closed' },
@@ -119,19 +119,23 @@ export default function AvailabilityAdminPage() {
       setNewBlockedDate('')
       setNewBlockedReason('')
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleDeleteBlockedDate = async (dateStr: string) => {
+    const isConfirmed = await confirmDelete(
+      `Blocked Date (${dateStr})`,
+      'This date will be reopened for public bookings on the clinic calendar.'
+    )
+    if (!isConfirmed) return
+
     const { error } = await supabase.from('blocked_dates').delete().eq('date', dateStr)
 
     if (error) {
-      setMessage({ text: `Error deleting: ${error.message}`, type: 'error' })
+      toastError('Unblock Error', error.message)
     } else {
-      setMessage({ text: `Date ${dateStr} unblocked in database.`, type: 'success' })
+      toastSuccess('Date Reopened', `Date ${dateStr} unblocked in database.`)
       setBlockedDates((prev) => prev.filter((b) => b.date !== dateStr))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   return (

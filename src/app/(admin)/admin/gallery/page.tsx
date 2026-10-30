@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Plus, Trash2, Eye, EyeOff, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Eye, EyeOff, X, Sparkles, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
+import PhotoUpload from '@/components/admin/PhotoUpload'
 
 interface GalleryCase {
   id: string
@@ -19,7 +21,6 @@ export default function GalleryAdminPage() {
   const [cases, setCases] = useState<GalleryCase[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
-  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -34,6 +35,7 @@ export default function GalleryAdminPage() {
     const { data, error } = await supabase.from('gallery_cases').select('*').order('created_at', { ascending: false })
     if (error) {
       console.error('Error fetching cases:', error)
+      toastError('Fetch Error', error.message)
     } else if (data) {
       setCases(data)
     }
@@ -51,41 +53,48 @@ export default function GalleryAdminPage() {
       .eq('id', id)
 
     if (error) {
-      setMessage({ text: `Update error: ${error.message}`, type: 'error' })
+      toastError('Update Error', error.message)
     } else {
       setCases((prev) =>
         prev.map((c) => (c.id === id ? { ...c, published: !currentPublished } : c))
       )
-      setMessage({
-        text: `Case ${!currentPublished ? 'published to live gallery' : 'hidden from public view'}.`,
-        type: 'success',
-      })
+      toastSuccess(
+        currentPublished ? 'Case Hidden' : 'Case Published',
+        `Case ${!currentPublished ? 'is now live on the smile gallery' : 'is now private'}.`
+      )
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete case "${title}" from database?`)) return
+    const isConfirmed = await confirmDelete(
+      `Case "${title}"`,
+      'This clinical case and its comparison photography will be removed from Supabase.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('gallery_cases').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Delete error: ${error.message}`, type: 'error' })
+      toastError('Delete Error', error.message)
     } else {
-      setMessage({ text: `Case "${title}" removed from Supabase.`, type: 'success' })
+      toastSuccess('Case Deleted', `"${title}" was removed from the database.`)
       setCases((prev) => prev.filter((c) => c.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (!formData.before_path || !formData.after_path) {
+      toastError('Photos Required', 'Please import both Before and After photos.')
+      return
+    }
+
     const { error } = await supabase.from('gallery_cases').insert([formData])
 
     if (error) {
-      setMessage({ text: `Creation error: ${error.message}`, type: 'error' })
+      toastError('Creation Failed', error.message)
     } else {
-      setMessage({ text: 'New smile transformation case added into Supabase.', type: 'success' })
+      toastSuccess('Smile Case Added', 'New transformation dossier registered in Supabase.')
       setModalOpen(false)
       fetchCases()
       setFormData({
@@ -96,7 +105,6 @@ export default function GalleryAdminPage() {
         published: true,
       })
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   return (
@@ -111,7 +119,7 @@ export default function GalleryAdminPage() {
             Before & After Smile Dossiers
           </h1>
           <p className="mt-1 text-xs text-[#0E1A24]/60">
-            Curate optical evidence and ceramic restoration comparative pairs.
+            Import comparative baseline and revealed photography directly from your computer to curate the optical gallery.
           </p>
         </div>
 
@@ -123,23 +131,6 @@ export default function GalleryAdminPage() {
           <span>Add Smile Case</span>
         </button>
       </div>
-
-      {message && (
-        <div
-          className={`flex items-center gap-2 rounded-2xl p-4 text-xs ${
-            message.type === 'success'
-              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-              : 'bg-rose-50 text-rose-900 border border-rose-200'
-          }`}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       {loading ? (
         <div className="py-16 text-center text-xs text-[#0E1A24]/50">
@@ -164,7 +155,7 @@ export default function GalleryAdminPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => togglePublish(c.id, c.published)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                       c.published
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         : 'bg-[#EFECE3] text-[#0E1A24]/60'
@@ -175,7 +166,7 @@ export default function GalleryAdminPage() {
                   </button>
                   <button
                     onClick={() => handleDelete(c.id, c.title)}
-                    className="p-1.5 text-[#0E1A24]/40 hover:text-rose-600 rounded-full hover:bg-rose-50"
+                    className="p-1.5 text-[#0E1A24]/40 hover:text-rose-600 rounded-full hover:bg-rose-50 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -183,14 +174,30 @@ export default function GalleryAdminPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="relative h-40 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]">
-                  {c.before_path && <Image src={c.before_path} alt="Before" fill className="object-cover" />}
+                <div className="relative h-44 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]">
+                  {c.before_path && (
+                    <Image
+                      src={c.before_path}
+                      alt="Before"
+                      fill
+                      unoptimized={c.before_path.includes('supabase.co') || c.before_path.startsWith('data:')}
+                      className="object-cover"
+                    />
+                  )}
                   <span className="absolute bottom-2 left-2 rounded-full bg-[#0E1A24]/80 px-2.5 py-0.5 text-[10px] font-semibold text-white">
                     Baseline
                   </span>
                 </div>
-                <div className="relative h-40 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]">
-                  {c.after_path && <Image src={c.after_path} alt="After" fill className="object-cover" />}
+                <div className="relative h-44 rounded-2xl overflow-hidden bg-[#E8DCC8] border border-[#DAC7AD]">
+                  {c.after_path && (
+                    <Image
+                      src={c.after_path}
+                      alt="After"
+                      fill
+                      unoptimized={c.after_path.includes('supabase.co') || c.after_path.startsWith('data:')}
+                      className="object-cover"
+                    />
+                  )}
                   <span className="absolute bottom-2 left-2 rounded-full bg-[#12B5A6] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
                     Revealed
                   </span>
@@ -204,15 +211,25 @@ export default function GalleryAdminPage() {
       {/* MODAL */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0E1A24]/60 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-xl rounded-4xl border border-[#E5E0D5] bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-[#F0ECE1]">
-              <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">Add Transformation Pair</h2>
-              <button onClick={() => setModalOpen(false)} className="text-[#0E1A24]/50 hover:text-[#0E1A24]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#12B5A6]">
+                  Aesthetic Gallery
+                </span>
+                <h2 className="font-serif text-2xl font-medium text-[#0E1A24]">
+                  Add Transformation Pair
+                </h2>
+              </div>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="text-[#0E1A24]/50 hover:text-[#0E1A24] rounded-full p-1.5 hover:bg-[#FAF8F5]"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="mt-6 space-y-4 text-xs">
+            <form onSubmit={handleCreate} className="mt-6 space-y-5 text-xs">
               <div>
                 <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
                   Case Title *
@@ -237,35 +254,29 @@ export default function GalleryAdminPage() {
                   value={formData.treatment}
                   onChange={(e) => setFormData({ ...formData, treatment: e.target.value })}
                   placeholder="e.g. Micro-layered feldspathic porcelain laminates"
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
+                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24] focus:border-[#12B5A6] focus:outline-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
-                  Before Image URL *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={formData.before_path}
-                  onChange={(e) => setFormData({ ...formData, before_path: e.target.value })}
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
-                />
-              </div>
+              {/* Photo Upload: Before Image */}
+              <PhotoUpload
+                value={formData.before_path}
+                onChange={(url) => setFormData({ ...formData, before_path: url })}
+                label="Baseline / Before Photo (Import from Computer)"
+                folder="gallery-before"
+                aspectRatio="landscape"
+                helperText="Upload the baseline/pre-treatment photograph from your computer."
+              />
 
-              <div>
-                <label className="block text-[#0E1A24]/70 mb-1 font-semibold uppercase tracking-wider text-[11px]">
-                  After Image URL *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={formData.after_path}
-                  onChange={(e) => setFormData({ ...formData, after_path: e.target.value })}
-                  className="w-full rounded-2xl border border-[#DAC7AD] bg-[#FAF8F5] p-3 text-[#0E1A24]"
-                />
-              </div>
+              {/* Photo Upload: After Image */}
+              <PhotoUpload
+                value={formData.after_path}
+                onChange={(url) => setFormData({ ...formData, after_path: url })}
+                label="Revealed / After Photo (Import from Computer)"
+                folder="gallery-after"
+                aspectRatio="landscape"
+                helperText="Upload the finalized post-treatment aesthetic result from your computer."
+              />
 
               <div className="flex items-center gap-3 pt-2">
                 <input

@@ -90,4 +90,96 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #12B5A6;
   }
+
+  /* SweetAlert2 Luxury Styling */
+  .dentacare-swal-popup {
+    border-radius: 2rem !important;
+    border: 1px solid #DAC7AD !important;
+    background: #FAF8F5 !important;
+    box-shadow: 0 25px 60px -15px rgba(14, 26, 36, 0.25) !important;
+    padding: 2.25rem !important;
+    font-family: inherit !important;
+  }
+
+  .dentacare-swal-title {
+    font-family: var(--font-playfair), Georgia, serif !important;
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    color: #0E1A24 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .dentacare-swal-html {
+    font-size: 0.85rem !important;
+    color: rgba(14, 26, 36, 0.72) !important;
+    line-height: 1.6 !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  .dentacare-swal-confirm {
+    border-radius: 9999px !important;
+    background: #0E1A24 !important;
+    color: #FFFFFF !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    padding: 0.75rem 1.75rem !important;
+    margin: 0.35rem !important;
+    cursor: pointer !important;
+    border: 1px solid #0E1A24 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dentacare-swal-confirm:hover {
+    background: #12B5A6 !important;
+    border-color: #12B5A6 !important;
+  }
+
+  .dentacare-swal-cancel {
+    border-radius: 9999px !important;
+    background: #FFFFFF !important;
+    color: rgba(14, 26, 36, 0.75) !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1.5rem !important;
+    margin: 0.35rem !important;
+    cursor: pointer !important;
+    border: 1px solid #DAC7AD !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dentacare-swal-cancel:hover {
+    background: #F4F1EA !important;
+    color: #0E1A24 !important;
+  }
+
+  .dentacare-swal-deny {
+    border-radius: 9999px !important;
+    background: #E11D48 !important;
+    color: #FFFFFF !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    padding: 0.75rem 1.5rem !important;
+    margin: 0.35rem !important;
+    cursor: pointer !important;
+    border: none !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dentacare-toast-popup {
+    border-radius: 1.25rem !important;
+    border: 1px solid #DAC7AD !important;
+    background: #FAF8F5 !important;
+    box-shadow: 0 10px 30px -5px rgba(14, 26, 36, 0.15) !important;
+    padding: 0.85rem 1.25rem !important;
+    font-family: inherit !important;
+  }
+
+  .dentacare-toast-title {
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    color: #0E1A24 !important;
+  }
 }

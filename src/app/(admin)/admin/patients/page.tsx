@@ -15,6 +15,7 @@ import {
   FileText,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { confirmDelete, toastSuccess, toastError } from '@/lib/sweetalert'
 
 interface Patient {
   id: string
@@ -78,16 +79,19 @@ export default function PatientsAdminPage() {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete patient file for "${name}"?`)) return
+    const isConfirmed = await confirmDelete(
+      `Patient "${name}"`,
+      'All historical clinical notes and contact records associated with this patient will be permanently deleted.'
+    )
+    if (!isConfirmed) return
 
     const { error } = await supabase.from('patients').delete().eq('id', id)
     if (error) {
-      setMessage({ text: `Delete error: ${error.message}`, type: 'error' })
+      toastError('Delete Error', error.message)
     } else {
-      setMessage({ text: `Patient file for "${name}" removed.`, type: 'success' })
+      toastSuccess('Patient Deleted', `Patient file for "${name}" removed.`)
       setPatients((prev) => prev.filter((p) => p.id !== id))
     }
-    setTimeout(() => setMessage(null), 3000)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,9 +109,9 @@ export default function PatientsAdminPage() {
         .eq('id', editingPatient.id)
 
       if (error) {
-        setMessage({ text: `Update error: ${error.message}`, type: 'error' })
+        toastError('Update Error', error.message)
       } else {
-        setMessage({ text: 'Patient records updated.', type: 'success' })
+        toastSuccess('Patient Record Updated', `${formData.full_name} updated successfully.`)
         setModalOpen(false)
         fetchPatients()
       }
@@ -122,14 +126,13 @@ export default function PatientsAdminPage() {
       ])
 
       if (error) {
-        setMessage({ text: `Registration error: ${error.message}`, type: 'error' })
+        toastError('Registration Error', error.message)
       } else {
-        setMessage({ text: 'New patient registered in clinic database.', type: 'success' })
+        toastSuccess('Patient Registered', `${formData.full_name} added to the clinic database.`)
         setModalOpen(false)
         fetchPatients()
       }
     }
-    setTimeout(() => setMessage(null), 3500)
   }
 
   const filtered = patients.filter(

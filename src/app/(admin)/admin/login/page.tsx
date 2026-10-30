@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Shield, Lock, Mail, KeyRound, ArrowRight, CheckCircle2, AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { toastSuccess, toastError } from '@/lib/sweetalert'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -31,7 +32,9 @@ export default function AdminLoginPage() {
       })
 
       if (authError || !authData.user) {
-        setError(authError?.message || 'Invalid login credentials. Please check your email and password.')
+        const msg = authError?.message || 'Invalid login credentials. Please check your email and password.'
+        setError(msg)
+        toastError('Authentication Failed', msg)
         setLoading(false)
         return
       }
@@ -45,7 +48,9 @@ export default function AdminLoginPage() {
 
       if (adminError || !adminRecord) {
         await supabase.auth.signOut()
-        setError('Access denied: Your account is not registered in the clinic staff directory.')
+        const msg = 'Access denied: Your account is not registered in the clinic staff directory.'
+        setError(msg)
+        toastError('Unauthorized', msg)
         setLoading(false)
         return
       }
@@ -57,9 +62,11 @@ export default function AdminLoginPage() {
       if (totpFactor) {
         setMfaFactorId(totpFactor.id)
         setStep('mfa')
+        toastSuccess('Identity Verified', 'Enter your 6-digit TOTP code to proceed.')
         setLoading(false)
       } else {
         // Successful login without active TOTP factor
+        toastSuccess('Welcome, Doctor', 'Authentication successful.')
         router.push('/admin')
         router.refresh()
       }
@@ -87,11 +94,14 @@ export default function AdminLoginPage() {
       })
 
       if (verifyError) {
-        setError(`MFA Verification Failed: ${verifyError.message}`)
+        const msg = `MFA Verification Failed: ${verifyError.message}`
+        setError(msg)
+        toastError('MFA Challenge Failed', verifyError.message)
         setLoading(false)
         return
       }
 
+      toastSuccess('Session Authenticated', 'Access granted to admin panel.')
       router.push('/admin')
       router.refresh()
     } catch (err: unknown) {
