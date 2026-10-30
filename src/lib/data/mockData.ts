@@ -222,7 +222,7 @@ export const CLINIC_TEAM: TeamMember[] = [
     role: "Invisalign® Diamond Plus Provider",
     bio: "Dr. Vance transforms complex malocclusions with algorithmic elegance. Known for her gentle demeanor and mathematical eye for facial symmetry, she designs orthodontic plans that accentuate cheekbone structure and lip support.",
     education: "University of Pennsylvania School of Dental Medicine | MS in Orthodontics",
-    photoPath: "https://images.unsplash.com/photo-1594824813637-27e1f13b1f13?auto=format&fit=crop&w=800&q=80",
+    photoPath: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80",
     specialties: ["Clear Aligner Therapy", "Accelerated Orthodontics", "Interceptive Smiles"],
     published: true,
     sortOrder: 2
@@ -246,7 +246,7 @@ export const CLINIC_TEAM: TeamMember[] = [
     role: "Holistic Oral Health Strategist",
     bio: "Dr. Sterling champions preventive wellness and microbiome restoration, integrating non-toxic biological protocols with laser tissue therapy to ensure smiles thrive for decades.",
     education: "UCLA School of Dentistry | Master of Oral Biology",
-    photoPath: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80",
+    photoPath: "https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=800&q=80",
     specialties: ["Laser Periodontics", "Biological Dentistry", "Air-Flow Polishing"],
     published: true,
     sortOrder: 4

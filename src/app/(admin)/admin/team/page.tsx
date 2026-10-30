@@ -71,7 +71,7 @@ export default function AdminTeamPage() {
       name: '',
       title: 'Cosmetic & Restorative Specialist',
       bio: '',
-      photo_path: 'https://images.unsplash.com/photo-1594824813637-27e1f13b1f13?auto=format&fit=crop&w=800&q=80',
+      photo_path: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=800&q=80',
       sort_order: doctors.length + 1,
       published: true,
     })

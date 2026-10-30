@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize Supabase admin client with service role key for full bucket write permissions
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-const supabase = createClient(supabaseUrl, supabaseKey)
+export const dynamic = 'force-dynamic'
+
+// Default fallback credentials so Next.js never fails during static build collection on Vercel
+const DEFAULT_SUPABASE_URL = 'https://qknsobdwmngzyriptptd.supabase.co'
+const DEFAULT_SERVICE_ROLE_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrbnNvYmR3bW5nenlyaXB0cHRkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MzAxNDUwNSwiZXhwIjoyMTA4NTkwNTA1fQ.DGXTW57ZFojx0Y9PQWsLGbpIMs4T0mI_sO5aH3Xhr3Y'
 
 const BUCKET_NAME = 'dentacare-media'
+
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    DEFAULT_SERVICE_ROLE_KEY
+  return createClient(url, key)
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,6 +58,8 @@ export async function POST(req: NextRequest) {
     // Ensure bucket exists or created
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
+
+    const supabase = getAdminClient()
 
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
